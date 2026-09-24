@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>介護の業務効率化 見本集</title>
+<meta name="description" content="介護事業所の毎月の手作業を、ボタン一つで終わらせる業務効率化ツールの見本です。">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1f2933; --muted: #616e7c;
+    --line: #d9dee4; --accent: #2f7d6d; --accent-weak: #e3f2ee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: 15px; line-height: 1.7;
+  }
+  header { background: var(--accent); color: #fff; padding: 28px 16px; }
+  header .inner, main { max-width: 960px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 24px; }
+  header p { margin: 6px 0 0; opacity: .92; }
+  main { padding: 20px 16px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: left top; border-bottom: 1px solid var(--line); }
+  .card .ph {
+    aspect-ratio: 16 / 9; background: #eef1f4; color: var(--muted);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .card .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card h2 { margin: 0; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card .effect { color: var(--text); font-weight: 700; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
+  .btn {
+    display: inline-block; text-decoration: none; border-radius: 8px; padding: 8px 14px; font-size: 14px;
+    border: 1px solid var(--accent); color: var(--accent); background: #fff;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .soon { font-size: 13px; color: var(--muted); }
+  .note { background: var(--accent-weak); border-radius: 8px; padding: 12px 14px; font-size: 14px; margin-top: 20px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>介護の業務効率化 見本集</h1>
+    <p>毎月の手作業を、ボタン一つに。介護事業所向けツールの見本です。</p>
+  </div>
+</header>
+<main>
+  <div class="cards">
+    <section class="card">
+      <img src="shift/screenshots/result.png" alt="シフト表の自動作成の画面">
+      <div class="body">
+        <h2>シフト表の自動作成</h2>
+        <p class="effect">毎月3〜5時間 → ボタン一つ+微調整</p>
+        <p>希望休・有給・資格・必要人数を守って、1か月分のシフトを自動で組みます。</p>
+        <div class="links">
+          <a class="btn primary" href="shift/">触ってみる</a>
+          <a class="btn" href="shift/?demo">完成イメージ</a>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="ph">準備中</div>
+      <div class="body">
+        <h2>実績の集計</h2>
+        <p>サービス提供の記録から、利用者別・月別の回数や時間をボタン一つで集計します。</p>
+        <p class="soon">近日公開</p>
+      </div>
+    </section>
+    <section class="card">
+      <div class="ph">準備中</div>
+      <div class="body">
+        <h2>送迎表の作成</h2>
+        <p>利用予定と車・ドライバーの情報から、日ごとの送迎表を作ります。</p>
+        <p class="soon">近日公開</p>
+      </div>
+    </section>
+  </div>
+  <div class="note">
+    どの見本も、Excel版・Googleスプレッドシート版・Web版の3つの形で作れます。勤務の種類やルールは事業所に合わせて作り変えます。<br>
+    ここにあるデータはすべて架空です。入力したデータはブラウザの中だけで使われ、外部には送信されません。
+  </div>
+</main>
+<footer>介護の業務効率化 見本集</footer>
+</body>
+</html>

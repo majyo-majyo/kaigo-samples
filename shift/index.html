@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>介護シフト自動作成(見本)</title>
+<meta name="description" content="職員の希望休・資格・必要人数から、介護事業所の月のシフト表をボタン一つで作る見本です。">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1f2933;
+    --muted: #616e7c;
+    --line: #d9dee4;
+    --accent: #2f7d6d;
+    --accent-weak: #e3f2ee;
+    --danger: #c0392b;
+    --danger-weak: #fdecea;
+    --sat: #2b6cb0;
+    --sun: #c0392b;
+    --s-early: #ffe6b0;
+    --s-day: #d4eaff;
+    --s-late: #e5dbff;
+    --s-night: #243b6b;
+    --s-ake: #c9d3e6;
+    --s-off: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: 15px; line-height: 1.6;
+  }
+  header { background: var(--accent); color: #fff; padding: 20px 16px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; opacity: .92; font-size: 14px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  section.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  h2 { font-size: 18px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  h2 .step {
+    display: inline-flex; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 14px;
+    align-items: center; justify-content: center;
+  }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .notice {
+    background: var(--accent-weak); border-radius: 8px; padding: 10px 12px;
+    font-size: 13px; margin-bottom: 16px;
+  }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: center; white-space: nowrap; }
+  th { background: #f0f2f5; font-weight: 600; font-size: 13px; }
+  .staff-table input[type=text] { width: 110px; }
+  .staff-table input[type=number] { width: 56px; }
+  input, select, button { font: inherit; }
+  input[type=text], input[type=number], input[type=month], select {
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: #fff;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .need-item { display: flex; align-items: center; gap: 6px; }
+  button {
+    border: 1px solid var(--line); background: #fff; border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  button:hover { background: #f0f2f5; }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+    font-size: 17px; font-weight: 700; padding: 12px 28px;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.small { padding: 2px 8px; font-size: 13px; }
+  .grid th.sticky, .grid td.sticky {
+    position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; min-width: 96px;
+  }
+  .grid th.sticky { background: #f0f2f5; }
+  .grid td.cell { width: 30px; min-width: 30px; padding: 3px 0; cursor: pointer; user-select: none; font-size: 13px; }
+  .sat { color: var(--sat); }
+  .sun { color: var(--sun); }
+  .hope-on { background: #ffd9d4; color: var(--danger); font-weight: 700; }
+  .s-早 { background: var(--s-early); }
+  .s-日 { background: var(--s-day); }
+  .s-遅 { background: var(--s-late); }
+  .s-夜 { background: var(--s-night); color: #fff; }
+  .s-明 { background: var(--s-ake); }
+  .s-休 { background: var(--s-off); color: #9aa5b1; }
+  .s-有, .paid-on { background: #d9f2e4; color: #1e6b4f; font-weight: 700; }
+  .locked { box-shadow: inset 0 0 0 2px #e8a09a; }
+  .count-row td { font-size: 12px; background: #fafbfc; }
+  .short { background: var(--danger-weak) !important; color: var(--danger); font-weight: 700; }
+  .ok { color: var(--accent); }
+  .sum { font-size: 13px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; margin: 8px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend i { display: inline-block; width: 18px; height: 14px; border: 1px solid var(--line); border-radius: 3px; }
+  .result-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 8px; }
+  .stat { background: #f0f2f5; border-radius: 8px; padding: 8px 14px; }
+  .stat b { font-size: 20px; }
+  .violations { margin: 8px 0 0; padding-left: 20px; }
+  .violations li { color: var(--danger); }
+  .all-ok { color: var(--accent); font-weight: 700; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  #result { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+  @media print {
+    header, .no-print, footer { display: none !important; }
+    body { background: #fff; }
+    main { max-width: none; padding: 0; }
+    section.card { border: none; padding: 0; }
+    #result { display: block !important; }
+    .grid td.cell { width: 22px; min-width: 22px; font-size: 11px; }
+    th, td { padding: 1px 2px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>介護シフト自動作成(見本)</h1>
+  <p>職員・希望休・必要人数を入れて、ボタンを押すだけで月のシフト表ができます。</p>
+</header>
+
+<main>
+  <div class="notice no-print">
+    架空のサンプルデータが入っています。そのまま「シフトを自動作成」を押して試せます。<br>
+    入力したデータはこのブラウザの中だけで使われ、外部には送信されません。
+  </div>
+
+  <section class="card no-print">
+    <h2><span class="step">1</span>対象月と毎日の必要人数</h2>
+    <p class="hint">早番 7:00-16:00 / 日勤 9:00-18:00 / 遅番 11:00-20:00 / 夜勤 16:00-翌10:00</p>
+    <div class="row">
+      <label class="need-item">対象月 <input type="month" id="month"></label>
+      <label class="need-item">早番 <input type="number" id="need-早" min="0" max="9"> 人</label>
+      <label class="need-item">日勤 <input type="number" id="need-日" min="0" max="9"> 人</label>
+      <label class="need-item">遅番 <input type="number" id="need-遅" min="0" max="9"> 人</label>
+      <label class="need-item">夜勤 <input type="number" id="need-夜" min="0" max="9"> 人</label>
+    </div>
+  </section>
+
+  <section class="card no-print">
+    <h2><span class="step">2</span>職員</h2>
+    <p class="hint">常勤は月9日以上の休みを自動で確保します。パートは「月の上限日数」まで入ります。</p>
+    <div class="scroll">
+      <table class="staff-table">
+        <thead>
+          <tr><th>名前</th><th>勤務形態</th><th>資格</th><th>夜勤</th><th>月の上限日数</th><th></th></tr>
+        </thead>
+        <tbody id="staff-body"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button id="add-staff">+ 職員を追加</button></div>
+  </section>
+
+  <section class="card no-print">
+    <h2><span class="step">3</span>希望休</h2>
+    <p class="hint">マスをクリックするたびに「休」(希望休)→「有」(有給)→空欄 と切り替わります。どちらも必ず守られます。有給は公休(常勤は月9日以上)とは別に数えます。</p>
+    <div class="scroll"><table class="grid" id="hope-grid"></table></div>
+  </section>
+
+  <section class="card no-print" style="text-align:center">
+    <button class="primary" id="generate">シフトを自動作成</button>
+    <div class="actions" style="justify-content:center">
+      <button id="reset-sample" class="small">サンプルデータに戻す</button>
+    </div>
+  </section>
+
+  <section class="card" id="result">
+    <h2 class="no-print">シフト表</h2>
+    <div class="result-head no-print">
+      <div class="stat">作成にかかった時間 <b id="elapsed">-</b></div>
+      <div class="stat">守れなかったルール <b id="vio-count">-</b></div>
+    </div>
+    <p class="hint no-print">マスをクリックすると勤務を切り替えられます(早→日→遅→夜→明→休→有)。変えるとすぐにルールを確認し直します。</p>
+    <div class="legend">
+      <span><i class="s-早"></i>早番</span><span><i class="s-日"></i>日勤</span>
+      <span><i class="s-遅"></i>遅番</span><span><i class="s-夜"></i>夜勤</span>
+      <span><i class="s-明"></i>明け</span><span><i class="s-休"></i>休み(公休)</span><span><i class="s-有"></i>有給</span>
+      <span><i class="locked"></i>希望休・有給の希望</span>
+    </div>
+    <div class="scroll"><table class="grid" id="result-grid"></table></div>
+    <div id="vio-box" class="no-print"></div>
+    <div class="actions no-print">
+      <button id="regen">別の組み方で作り直す</button>
+      <button id="csv">CSVで保存(Excelで開けます)</button>
+      <button id="print">印刷する</button>
+    </div>
+  </section>
+</main>
+
+<footer>業務効率化の見本 / データはすべて架空です</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var SHIFTS = ["早", "日", "遅", "夜", "明", "休", "有"];
+  var WORK_SHIFTS = ["早", "日", "遅", "夜"];
+  var SHIFT_NAMES = { "早": "早番", "日": "日勤", "遅": "遅番", "夜": "夜勤", "明": "明け", "休": "休み", "有": "有給" };
+  var QUALS = ["介護福祉士", "看護師", "初任者研修"];
+  var QUALIFIED = { "介護福祉士": true, "看護師": true };
+  var MAX_STREAK = 5;
+  var MIN_OFF_FULLTIME = 9;
+  var TRIALS = 300;
+  var STORAGE_KEY = "kaigo-shift-sample-v2";
+
+  // ---------- サンプルデータ(架空) ----------
+  function sampleData() {
+    var staff = [
+      ["佐藤 花子", "常勤", "介護福祉士", true, 21],
+      ["鈴木 一郎", "常勤", "介護福祉士", true, 21],
+      ["高橋 美咲", "常勤", "初任者研修", true, 21],
+      ["田中 健太", "常勤", "介護福祉士", true, 21],
+      ["伊藤 由美", "常勤", "看護師", false, 21],
+      ["渡辺 翔", "常勤", "初任者研修", true, 21],
+      ["加藤 さくら", "常勤", "介護福祉士", true, 21],
+      ["山田 大輔", "常勤", "初任者研修", true, 21],
+      ["山本 恵子", "パート", "初任者研修", false, 12],
+      ["中村 直子", "パート", "介護福祉士", false, 16],
+      ["小林 誠", "パート", "初任者研修", true, 12],
+      ["吉田 真由美", "パート", "看護師", false, 12]
+    ].map(function (r) {
+      return { name: r[0], type: r[1], qual: r[2], night: r[3], limit: r[4] };
+    });
+    // 希望休(日付は1始まり)
+    var hopeDays = [[3, 17], [8, 9, 22], [14, 28], [1, 2], [10, 23, 24], [5, 19], [12, 26], [7, 21, 30],
+                    [6, 13, 20], [15, 16], [4, 11], [25, 27]];
+    var hope = hopeDays.map(function (days) { return days.map(function (d) { return d - 1; }); });
+    return {
+      month: "2026-11",
+      need: { "早": 1, "日": 3, "遅": 1, "夜": 1 },
+      staff: staff,
+      hope: hope,
+      paid: [[20], [], [], [], [], [], [], [], [], [10], [], []].map(function (days) { return days.map(function (d) { return d - 1; }); })
+    };
+  }
+
+  // ---------- 状態 ----------
+  var state = load() || sampleData();
+  if (!state.paid) state.paid = state.hope.map(function () { return []; });
+  var schedule = null; // [staffIndex][dayIndex] = shift
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* 保存できなくても動く */ }
+  }
+
+  function daysInMonth() {
+    var p = state.month.split("-");
+    return new Date(+p[0], +p[1], 0).getDate();
+  }
+  function monthNum() { return +state.month.split("-")[1]; }
+  function weekday(d) {
+    var p = state.month.split("-");
+    return new Date(+p[0], +p[1] - 1, d + 1).getDay();
+  }
+  var WD = ["日", "月", "火", "水", "木", "金", "土"];
+  function dayLabel(d) { return monthNum() + "/" + (d + 1) + "(" + WD[weekday(d)] + ")"; }
+  function wdClass(d) { var w = weekday(d); return w === 6 ? "sat" : w === 0 ? "sun" : ""; }
+
+  function isPaid(i, d) { return !!(state.paid[i] && state.paid[i].indexOf(d) >= 0); }
+  function isHope(i, d) { return isPaid(i, d) || !!(state.hope[i] && state.hope[i].indexOf(d) >= 0); }
+  function isOff(s) { return s === "休" || s === "有"; }
+  function paidCount(i) { return (state.paid[i] || []).length; }
+  function limitOf(i, N) {
+    var s = state.staff[i];
+    var lim = Math.max(0, +s.limit || 0);
+    if (s.type === "常勤") lim = Math.min(lim, N - MIN_OFF_FULLTIME - paidCount(i)); // 有給は公休とは別に数える
+    return lim;
+  }
+
+  // ---------- 入力画面 ----------
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderInputs() {
+    document.getElementById("month").value = state.month;
+    WORK_SHIFTS.forEach(function (s) { document.getElementById("need-" + s).value = state.need[s]; });
+    renderStaff();
+    renderHope();
+  }
+
+  function renderStaff() {
+    var body = document.getElementById("staff-body");
+    body.innerHTML = state.staff.map(function (s, i) {
+      return "<tr>" +
+        '<td><input type="text" data-i="' + i + '" data-k="name" value="' + esc(s.name) + '"></td>' +
+        '<td><select data-i="' + i + '" data-k="type">' +
+          ["常勤", "パート"].map(function (t) { return "<option" + (t === s.type ? " selected" : "") + ">" + t + "</option>"; }).join("") +
+        "</select></td>" +
+        '<td><select data-i="' + i + '" data-k="qual">' +
+          QUALS.map(function (q) { return "<option" + (q === s.qual ? " selected" : "") + ">" + q + "</option>"; }).join("") +
+        "</select></td>" +
+        '<td><label><input type="checkbox" data-i="' + i + '" data-k="night"' + (s.night ? " checked" : "") + "> できる</label></td>" +
+        '<td><input type="number" min="0" max="31" data-i="' + i + '" data-k="limit" value="' + s.limit + '"> 日</td>' +
+        '<td><button class="small" data-del="' + i + '">削除</button></td>' +
+        "</tr>";
+    }).join("");
+  }
+
+  function renderHope() {
+    var N = daysInMonth();
+    var html = "<thead><tr><th class='sticky'>名前</th>";
+    for (var d = 0; d < N; d++) {
+      html += "<th class='" + wdClass(d) + "'>" + (d + 1) + "<br>" + WD[weekday(d)] + "</th>";
+    }
+    html += "</tr></thead><tbody>";
+    state.staff.forEach(function (s, i) {
+      html += "<tr><td class='sticky'>" + esc(s.name) + "</td>";
+      for (var d = 0; d < N; d++) {
+        var mark = isPaid(i, d) ? "有" : isHope(i, d) ? "休" : "";
+        html += "<td class='cell" + (mark === "有" ? " paid-on" : mark ? " hope-on" : "") + "' data-hi='" + i + "' data-hd='" + d + "'>" + mark + "</td>";
+      }
+      html += "</tr>";
+    });
+    html += "</tbody>";
+    document.getElementById("hope-grid").innerHTML = html;
+  }
+
+  // ---------- 自動作成 ----------
+  function streakBefore(row, d) {
+    var n = 0;
+    for (var k = d - 1; k >= 0; k--) {
+      if (isOff(row[k]) || !row[k]) break;
+      n++;
+    }
+    return n;
+  }
+  function countOf(row, s) { return row.filter(function (x) { return x === s; }).length; }
+  function workCount(row) {
+    var n = 0;
+    for (var k = 0; k < row.length; k++) if (row[k] && !isOff(row[k])) n++;
+    return n;
+  }
+
+  function generateOnce(N) {
+    var S = state.staff.length;
+    var sch = [], nights = [], lim = [];
+    for (var i = 0; i < S; i++) {
+      sch.push(new Array(N).fill(""));
+      nights.push(0);
+      lim.push(limitOf(i, N));
+      for (var d0 = 0; d0 < N; d0++) if (isPaid(i, d0)) sch[i][d0] = "有"; else if (isHope(i, d0)) sch[i][d0] = "休";
+    }
+
+    for (var d = 0; d < N; d++) {
+      // 夜勤の翌日は明け、その翌日は休み
+      for (i = 0; i < S; i++) {
+        if (d > 0 && sch[i][d - 1] === "夜") sch[i][d] = "明";
+        else if (d > 1 && sch[i][d - 2] === "夜" && sch[i][d - 1] === "明") sch[i][d] = "休";
+      }
+
+      // 夜勤
+      for (var n = 0; n < state.need["夜"]; n++) {
+        var best = -1, bestScore = Infinity;
+        for (i = 0; i < S; i++) {
+          if (sch[i][d] || !state.staff[i].night) continue;
+          if (d + 1 < N && (isHope(i, d + 1) || sch[i][d + 1])) continue;
+          var add = d + 1 < N ? 2 : 1;
+          if (streakBefore(sch[i], d) + add > MAX_STREAK) continue;
+          if (workCount(sch[i]) + add > lim[i]) continue;
+          var sc = nights[i] * 10 + Math.random() * 3;
+          if (sc < bestScore) { bestScore = sc; best = i; }
+        }
+        if (best >= 0) { sch[best][d] = "夜"; nights[best]++; }
+      }
+
+      // 早番・遅番・日勤
+      ["早", "遅", "日"].forEach(function (s) {
+        for (var n2 = 0; n2 < state.need[s]; n2++) {
+          var b = -1, bs = Infinity;
+          for (var j = 0; j < S; j++) {
+            if (sch[j][d]) continue;
+            if (streakBefore(sch[j], d) + 1 > MAX_STREAK) continue;
+            var wc = workCount(sch[j]);
+            if (wc + 1 > lim[j]) continue;
+            var score = wc / Math.max(1, lim[j]) + Math.random() * 0.25;
+            if (state.staff[j].type !== "常勤") score += 0.3; // 常勤を先に埋め、パートで足りない所を補う
+            if (s === "早" && d > 0 && sch[j][d - 1] === "遅") score += 1; // 遅番の翌日の早番は避ける
+            if (score < bs) { bs = score; b = j; }
+          }
+          if (b >= 0) sch[b][d] = s;
+        }
+      });
+
+      // 有資格者がいない日は入れ替える
+      var hasQual = false;
+      for (i = 0; i < S; i++) {
+        if (WORK_SHIFTS.indexOf(sch[i][d]) >= 0 && QUALIFIED[state.staff[i].qual]) { hasQual = true; break; }
+      }
+      if (!hasQual) {
+        outer:
+        for (var q = 0; q < S; q++) {
+          if (sch[q][d] || !QUALIFIED[state.staff[q].qual]) continue;
+          if (streakBefore(sch[q], d) + 1 > MAX_STREAK || workCount(sch[q]) + 1 > lim[q]) continue;
+          for (var u = 0; u < S; u++) {
+            if (["早", "日", "遅"].indexOf(sch[u][d]) >= 0 && !QUALIFIED[state.staff[u].qual]) {
+              sch[q][d] = sch[u][d];
+              sch[u][d] = "";
+              break outer;
+            }
+          }
+        }
+      }
+
+      for (i = 0; i < S; i++) if (!sch[i][d]) sch[i][d] = "休";
+    }
+    return sch;
+  }
+
+  function evaluate(sch) {
+    var N = daysInMonth(), S = state.staff.length;
+    var v = [], score = 0;
+
+    for (var d = 0; d < N; d++) {
+      WORK_SHIFTS.forEach(function (s) {
+        var c = 0;
+        for (var i = 0; i < S; i++) if (sch[i][d] === s) c++;
+        if (c < state.need[s]) {
+          v.push(dayLabel(d) + " " + SHIFT_NAMES[s] + "が" + (state.need[s] - c) + "人足りません");
+          score += 100 * (state.need[s] - c);
+        }
+      });
+      var q = false;
+      for (var i2 = 0; i2 < S; i2++) {
+        if (WORK_SHIFTS.indexOf(sch[i2][d]) >= 0 && QUALIFIED[state.staff[i2].qual]) q = true;
+      }
+      if (!q) { v.push(dayLabel(d) + " 介護福祉士・看護師が1人もいません"); score += 100; }
+    }
+
+    var nightCounts = [];
+    for (var i = 0; i < S; i++) {
+      var st = state.staff[i], row = sch[i], name = st.name;
+      var streak = 0, reported = false;
+      for (d = 0; d < N; d++) {
+        if (isPaid(i, d) && row[d] !== "有") {
+          v.push(name + " " + dayLabel(d) + " 有給の希望なのに「" + (SHIFT_NAMES[row[d]] || row[d]) + "」になっています"); score += 1000;
+        } else if (isHope(i, d) && !isOff(row[d])) {
+          v.push(name + " " + dayLabel(d) + " 希望休なのに「" + (SHIFT_NAMES[row[d]] || row[d]) + "」になっています"); score += 1000;
+        }
+        if (row[d] === "夜" && !st.night) {
+          v.push(name + " " + dayLabel(d) + " 夜勤ができない人が夜勤です"); score += 1000;
+        }
+        if (row[d] === "夜" && d + 1 < N && row[d + 1] !== "明") {
+          v.push(name + " " + dayLabel(d + 1) + " 夜勤の翌日が「明け」ではありません"); score += 100;
+        }
+        if (row[d] === "明" && d + 1 < N && !isOff(row[d + 1])) {
+          v.push(name + " " + dayLabel(d + 1) + " 明けの翌日が「休み」ではありません"); score += 100;
+        }
+        if (!isOff(row[d])) {
+          streak++;
+          if (streak > MAX_STREAK && !reported) {
+            v.push(name + " " + dayLabel(d) + " で" + MAX_STREAK + "連勤を超えています"); score += 50; reported = true;
+          }
+        } else { streak = 0; reported = false; }
+      }
+      var wc = workCount(row), off = countOf(row, "休");
+      if (st.type === "常勤" && off < MIN_OFF_FULLTIME) {
+        v.push(name + " 公休が" + off + "日しかありません(常勤は" + MIN_OFF_FULLTIME + "日以上。有給は別)"); score += 50;
+      }
+      if (wc > (+st.limit || 0)) {
+        v.push(name + " 勤務が" + wc + "日で、上限の" + st.limit + "日を超えています"); score += 50;
+      }
+      if (st.night) nightCounts.push(row.filter(function (x) { return x === "夜"; }).length);
+    }
+    // 夜勤の偏りは小さく評価(ルール違反としては出さない)
+    if (nightCounts.length) {
+      var avg = nightCounts.reduce(function (a, b) { return a + b; }, 0) / nightCounts.length;
+      nightCounts.forEach(function (c) { score += (c - avg) * (c - avg); });
+    }
+    return { list: v, score: score };
+  }
+
+  function generate() {
+    var t0 = performance.now();
+    var N = daysInMonth();
+    var best = null, bestEval = null;
+    for (var t = 0; t < TRIALS; t++) {
+      var sch = generateOnce(N);
+      var ev = evaluate(sch);
+      if (!bestEval || ev.score < bestEval.score) { best = sch; bestEval = ev; }
+      if (ev.list.length === 0 && ev.score < 2) break;
+    }
+    schedule = best;
+    var sec = (performance.now() - t0) / 1000;
+    document.getElementById("elapsed").textContent = (sec < 0.1 ? "0.1秒未満" : sec.toFixed(1) + "秒");
+    renderResult();
+    var res = document.getElementById("result");
+    res.style.display = "block";
+    res.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---------- 結果 ----------
+  function renderResult() {
+    var N = daysInMonth(), S = state.staff.length;
+    var html = "<thead><tr><th class='sticky'>名前</th>";
+    for (var d = 0; d < N; d++) html += "<th class='" + wdClass(d) + "'>" + (d + 1) + "<br>" + WD[weekday(d)] + "</th>";
+    html += "<th>勤務</th><th>夜勤</th><th>公休</th><th>有給</th></tr></thead><tbody>";
+
+    for (var i = 0; i < S; i++) {
+      var row = schedule[i];
+      html += "<tr><td class='sticky'>" + esc(state.staff[i].name) + "</td>";
+      for (d = 0; d < N; d++) {
+        html += "<td class='cell s-" + row[d] + (isHope(i, d) ? " locked" : "") + "' data-ri='" + i + "' data-rd='" + d + "'>" + row[d] + "</td>";
+      }
+      var wc = workCount(row);
+      html += "<td class='sum'>" + wc + "</td><td class='sum'>" + countOf(row, "夜") +
+              "</td><td class='sum'>" + countOf(row, "休") + "</td><td class='sum'>" + countOf(row, "有") + "</td></tr>";
+    }
+
+    WORK_SHIFTS.forEach(function (s) {
+      html += "<tr class='count-row'><td class='sticky'>" + SHIFT_NAMES[s] + "の人数</td>";
+      for (var d2 = 0; d2 < N; d2++) {
+        var c = 0;
+        for (var k = 0; k < S; k++) if (schedule[k][d2] === s) c++;
+        html += "<td class='" + (c < state.need[s] ? "short" : "") + "'>" + c + "</td>";
+      }
+      html += "<td colspan='4'></td></tr>";
+    });
+    html += "<tr class='count-row'><td class='sticky'>有資格者</td>";
+    for (d = 0; d < N; d++) {
+      var q = false;
+      for (var k2 = 0; k2 < S; k2++) {
+        if (WORK_SHIFTS.indexOf(schedule[k2][d]) >= 0 && QUALIFIED[state.staff[k2].qual]) q = true;
+      }
+      html += q ? "<td class='ok'>○</td>" : "<td class='short'>×</td>";
+    }
+    html += "<td colspan='4'></td></tr></tbody>";
+    document.getElementById("result-grid").innerHTML = html;
+
+    var ev = evaluate(schedule);
+    document.getElementById("vio-count").textContent = ev.list.length + "件";
+    document.getElementById("vio-box").innerHTML = ev.list.length
+      ? "<p><b>守れなかったルール</b>(人数が足りない時は、職員を増やすか必要人数を見直してください)</p><ul class='violations'>" +
+        ev.list.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>"
+      : "<p class='all-ok'>すべてのルールを守れています。</p>";
+  }
+
+  function downloadCsv() {
+    var N = daysInMonth();
+    var lines = [];
+    var head = ["名前"];
+    for (var d = 0; d < N; d++) head.push(monthNum() + "/" + (d + 1) + "(" + WD[weekday(d)] + ")");
+    head.push("勤務日数", "夜勤回数", "公休", "有給");
+    lines.push(head);
+    state.staff.forEach(function (s, i) {
+      var row = schedule[i];
+      lines.push([s.name].concat(row, [workCount(row), countOf(row, "夜"), countOf(row, "休"), countOf(row, "有")]));
+    });
+    var csv = lines.map(function (r) {
+      return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(",");
+    }).join("\r\n");
+    var blob = new Blob(["﻿" + csv], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "シフト表_" + state.month + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  // ---------- イベント ----------
+  function onInputsChanged() {
+    save();
+    if (schedule) { schedule = null; document.getElementById("result").style.display = "none"; }
+  }
+
+  document.getElementById("month").addEventListener("change", function (e) {
+    if (!e.target.value) return;
+    state.month = e.target.value;
+    var N = daysInMonth();
+    function inMonth(h) { return h.filter(function (d) { return d < N; }); }
+    state.hope = state.hope.map(inMonth);
+    state.paid = state.paid.map(inMonth);
+    renderHope();
+    onInputsChanged();
+  });
+  WORK_SHIFTS.forEach(function (s) {
+    document.getElementById("need-" + s).addEventListener("change", function (e) {
+      state.need[s] = Math.max(0, parseInt(e.target.value, 10) || 0);
+      e.target.value = state.need[s];
+      onInputsChanged();
+    });
+  });
+
+  var staffBody = document.getElementById("staff-body");
+  staffBody.addEventListener("change", function (e) {
+    var t = e.target, i = +t.dataset.i, k = t.dataset.k;
+    if (k === undefined || isNaN(i)) return;
+    if (k === "night") state.staff[i].night = t.checked;
+    else if (k === "limit") state.staff[i].limit = Math.max(0, parseInt(t.value, 10) || 0);
+    else state.staff[i][k] = t.value;
+    if (k === "name") renderHope();
+    onInputsChanged();
+  });
+  staffBody.addEventListener("click", function (e) {
+    var del = e.target.dataset.del;
+    if (del === undefined) return;
+    state.staff.splice(+del, 1);
+    state.hope.splice(+del, 1);
+    state.paid.splice(+del, 1);
+    renderStaff(); renderHope(); onInputsChanged();
+  });
+  document.getElementById("add-staff").addEventListener("click", function () {
+    state.staff.push({ name: "新しい職員", type: "パート", qual: "初任者研修", night: false, limit: 12 });
+    state.hope.push([]);
+    state.paid.push([]);
+    renderStaff(); renderHope(); onInputsChanged();
+  });
+
+  document.getElementById("hope-grid").addEventListener("click", function (e) {
+    var td = e.target.closest("td[data-hi]");
+    if (!td) return;
+    var i = +td.dataset.hi, d = +td.dataset.hd;
+    // 空欄 → 休(希望休) → 有(有給) → 空欄
+    var h = state.hope[i] || (state.hope[i] = []);
+    var p = state.paid[i] || (state.paid[i] = []);
+    var mark;
+    if (p.indexOf(d) >= 0) { p.splice(p.indexOf(d), 1); mark = ""; }
+    else if (h.indexOf(d) >= 0) { h.splice(h.indexOf(d), 1); p.push(d); mark = "有"; }
+    else { h.push(d); mark = "休"; }
+    td.classList.toggle("hope-on", mark === "休");
+    td.classList.toggle("paid-on", mark === "有");
+    td.textContent = mark;
+    onInputsChanged();
+  });
+
+  document.getElementById("result-grid").addEventListener("click", function (e) {
+    var td = e.target.closest("td[data-ri]");
+    if (!td) return;
+    var i = +td.dataset.ri, d = +td.dataset.rd;
+    var cur = SHIFTS.indexOf(schedule[i][d]);
+    schedule[i][d] = SHIFTS[(cur + 1) % SHIFTS.length];
+    renderResult();
+  });
+
+  document.getElementById("generate").addEventListener("click", generate);
+  document.getElementById("regen").addEventListener("click", generate);
+  document.getElementById("csv").addEventListener("click", downloadCsv);
+  document.getElementById("print").addEventListener("click", function () { window.print(); });
+  document.getElementById("reset-sample").addEventListener("click", function () {
+    state = sampleData();
+    renderInputs();
+    onInputsChanged();
+  });
+
+  renderInputs();
+
+  // ?demo を付けて開くと、サンプルで作ったシフト表だけを見せる(出品ページのリンク・画面写真用)
+  if (/[?&]demo\b/.test(location.search)) {
+    state = sampleData();
+    renderInputs();
+    document.querySelectorAll("main > section.card:not(#result)").forEach(function (el) { el.style.display = "none"; });
+    generate();
+    window.scrollTo(0, 0);
+  }
+})();
+</script>
+</body>
+</html>
