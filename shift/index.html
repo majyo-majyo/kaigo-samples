@@ -105,14 +105,24 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   #result { display: none; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+  .print-only { display: none; }
+  /* 印刷はA4横1枚に収める */
+  @page { size: A4 landscape; margin: 8mm; }
   @media print {
     header, .no-print, footer { display: none !important; }
-    body { background: #fff; }
+    body { background: #fff; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     main { max-width: none; padding: 0; }
-    section.card { border: none; padding: 0; }
+    section.card { border: none; padding: 0; margin: 0; }
     #result { display: block !important; }
-    .grid td.cell { width: 22px; min-width: 22px; font-size: 11px; }
-    th, td { padding: 1px 2px; }
+    .print-only { display: block; font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+    .scroll { overflow: visible; }
+    .legend { font-size: 10px; margin: 2px 0 4px; }
+    .grid { width: 100%; table-layout: fixed; }
+    .grid th.sticky, .grid td.sticky { position: static; min-width: 0; width: 80px; }
+    .grid td.cell { width: auto; min-width: 0; font-size: 10px; padding: 1px 0; }
+    th, td { padding: 1px 0; font-size: 10px; }
+    .grid th, .grid td { border-color: #595959; }
+    .count-row td { font-size: 9px; }
   }
 </style>
 </head>
@@ -169,6 +179,7 @@
 
   <section class="card" id="result">
     <h2 class="no-print">シフト表</h2>
+    <p class="print-only" id="print-title"></p>
     <div class="result-head no-print">
       <div class="stat">作成にかかった時間 <b id="elapsed">-</b></div>
       <div class="stat">守れなかったルール <b id="vio-count">-</b></div>
@@ -184,7 +195,7 @@
     <div id="vio-box" class="no-print"></div>
     <div class="actions no-print">
       <button id="regen">別の組み方で作り直す</button>
-      <button id="csv">CSVで保存(Excelで開けます)</button>
+      <button id="xlsx">Excelで保存(色付き・A4横1枚で印刷できます)</button>
       <button id="print">印刷する</button>
     </div>
   </section>
@@ -503,6 +514,7 @@
   // ---------- 結果 ----------
   function renderResult() {
     var N = daysInMonth(), S = state.staff.length;
+    document.getElementById("print-title").textContent = "シフト表　" + state.month.split("-")[0] + "年" + monthNum() + "月";
     var html = "<thead><tr><th class='sticky'>名前</th>";
     for (var d = 0; d < N; d++) html += "<th class='" + wdClass(d) + "'>" + (d + 1) + "<br>" + WD[weekday(d)] + "</th>";
     html += "<th>勤務</th><th>夜勤</th><th>公休</th><th>有給</th></tr></thead><tbody>";
@@ -546,27 +558,169 @@
       : "<p class='all-ok'>すべてのルールを守れています。</p>";
   }
 
-  function downloadCsv() {
-    var N = daysInMonth();
-    var lines = [];
-    var head = ["名前"];
-    for (var d = 0; d < N; d++) head.push(monthNum() + "/" + (d + 1) + "(" + WD[weekday(d)] + ")");
-    head.push("勤務日数", "夜勤回数", "公休", "有給");
-    lines.push(head);
-    state.staff.forEach(function (s, i) {
-      var row = schedule[i];
-      lines.push([s.name].concat(row, [workCount(row), countOf(row, "夜"), countOf(row, "休"), countOf(row, "有")]));
+  // ---------- Excelで保存(色・罫線付き、A4横1枚で印刷できる設定) ----------
+  var EXCELJS_URL = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
+  var XL_FILL = { "早": "FFFFE6B0", "日": "FFD4EAFF", "遅": "FFE5DBFF", "夜": "FF243B6B", "明": "FFC9D3E6", "有": "FFD9F2E4" };
+
+  function loadExcelJs() {
+    if (window.ExcelJS) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = EXCELJS_URL;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error("Excel保存の部品を読み込めませんでした")); };
+      document.head.appendChild(s);
     });
-    var csv = lines.map(function (r) {
-      return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(",");
-    }).join("\r\n");
-    var blob = new Blob(["﻿" + csv], { type: "text/csv" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "シフト表_" + state.month + ".csv";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  function colName(n) {
+    var s = "";
+    while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+
+  function downloadXlsx() {
+    var btn = document.getElementById("xlsx");
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Excelを作っています…";
+    loadExcelJs().then(function () {
+      return buildXlsx().xlsx.writeBuffer();
+    }).then(function (buf) {
+      var blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "シフト表_" + state.month + ".xlsx";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }).catch(function (e) {
+      alert(e.message + "。インターネットにつながっているか確認してください。");
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = label;
+    });
+  }
+
+  function buildXlsx() {
+    var N = daysInMonth(), S = state.staff.length;
+    var lastCol = N + 5;
+    var thin = { style: "thin", color: { argb: "FF595959" } }; // 印刷ではっきり見える濃い罫線
+    var border = { top: thin, left: thin, bottom: thin, right: thin };
+    var hopeEdge = { style: "medium", color: { argb: "FFE8A09A" } };
+    var font = "Meiryo UI";
+
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet("シフト表", {
+      pageSetup: {
+        paperSize: 9, orientation: "landscape", // A4横
+        fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+        horizontalCentered: true,
+        margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 }
+      },
+      views: [{ state: "frozen", xSplit: 1, ySplit: 4 }]
+    });
+
+    ws.getColumn(1).width = 12;
+    for (var c = 2; c <= N + 1; c++) ws.getColumn(c).width = 3.6;
+    for (c = N + 2; c <= lastCol; c++) ws.getColumn(c).width = 5;
+
+    ws.getCell(1, 1).value = "シフト表　" + state.month.split("-")[0] + "年" + monthNum() + "月";
+    ws.getCell(1, 1).font = { name: font, size: 14, bold: true };
+    ws.getCell(2, 1).value = "早=早番 7-16 / 日=日勤 9-18 / 遅=遅番 11-20 / 夜=夜勤 16-翌10 / 明=明け / 休=休み(公休) / 有=有給　赤枠=希望休・有給の希望";
+    ws.getCell(2, 1).font = { name: font, size: 9, color: { argb: "FF616E7C" } };
+
+    // 見出し
+    var head1 = ["名前"], head2 = [""];
+    for (var d = 0; d < N; d++) { head1.push(d + 1); head2.push(WD[weekday(d)]); }
+    head1.push("勤務", "夜勤", "公休", "有給");
+    head2.push("", "", "", "");
+    [head1, head2].forEach(function (vals, k) {
+      var row = ws.getRow(3 + k);
+      row.height = 18;
+      vals.forEach(function (v, j) {
+        var cell = row.getCell(1 + j);
+        cell.value = v;
+        var w = j >= 1 && j <= N ? weekday(j - 1) : -1;
+        cell.font = { name: font, size: 10, bold: true, color: { argb: w === 6 ? "FF2B6CB0" : w === 0 ? "FFC0392B" : "FF1F2933" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F2F5" } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = border;
+      });
+    });
+
+    // 職員ごとの行
+    for (var i = 0; i < S; i++) {
+      var sch = schedule[i];
+      var vals = [state.staff[i].name].concat(sch, [workCount(sch), countOf(sch, "夜"), countOf(sch, "休"), countOf(sch, "有")]);
+      var row = ws.getRow(5 + i);
+      row.height = 24;
+      vals.forEach(function (v, j) {
+        var cell = row.getCell(1 + j);
+        cell.value = v;
+        cell.border = border;
+        cell.alignment = { horizontal: j === 0 ? "left" : "center", vertical: "middle" };
+        var sh = j >= 1 && j <= N ? v : null;
+        cell.font = { name: font, size: 10, bold: sh === "有",
+          color: { argb: sh === "夜" ? "FFFFFFFF" : sh === "休" ? "FF9AA5B1" : sh === "有" ? "FF1E6B4F" : "FF1F2933" } };
+        if (sh && XL_FILL[sh]) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL_FILL[sh] } };
+        if (sh && isHope(i, j - 1)) cell.border = { top: hopeEdge, left: hopeEdge, bottom: hopeEdge, right: hopeEdge };
+      });
+    }
+
+    // 日ごとの人数と有資格者
+    var r0 = 5 + S;
+    var labels = WORK_SHIFTS.map(function (s) { return SHIFT_NAMES[s] + "の人数"; }).concat(["有資格者"]);
+    labels.forEach(function (lab, k) {
+      var row = ws.getRow(r0 + k);
+      row.height = 18;
+      row.getCell(1).value = lab;
+      for (var d2 = 0; d2 <= N; d2++) {
+        var cell = row.getCell(1 + d2);
+        cell.border = border;
+        cell.font = { name: font, size: 9 };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFAFBFC" } };
+        if (d2 === 0) continue;
+        var short;
+        if (k < 4) {
+          var s = WORK_SHIFTS[k], cnt = 0;
+          for (var q = 0; q < S; q++) if (schedule[q][d2 - 1] === s) cnt++;
+          cell.value = cnt;
+          short = cnt < state.need[s];
+        } else {
+          var ok = false;
+          for (var q2 = 0; q2 < S; q2++) {
+            if (WORK_SHIFTS.indexOf(schedule[q2][d2 - 1]) >= 0 && QUALIFIED[state.staff[q2].qual]) ok = true;
+          }
+          cell.value = ok ? "○" : "×";
+          short = !ok;
+          if (ok) cell.font = { name: font, size: 9, color: { argb: "FF2F7D6D" } };
+        }
+        cell.alignment = { horizontal: "center" };
+        if (short) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDECEA" } };
+          cell.font = { name: font, size: 9, bold: true, color: { argb: "FFC0392B" } };
+        }
+      }
+    });
+    var lastRow = r0 + labels.length - 1;
+    ws.pageSetup.printArea = "A1:" + colName(lastCol) + lastRow;
+
+    // 守れなかったルール(印刷範囲の外、表の下に置く)
+    var ev = evaluate(schedule);
+    var rv = lastRow + 2;
+    ws.getCell(rv, 1).value = "守れなかったルール";
+    ws.getCell(rv, 1).font = { name: font, bold: true };
+    if (!ev.list.length) {
+      ws.getCell(rv + 1, 1).value = "すべてのルールを守れています。";
+      ws.getCell(rv + 1, 1).font = { name: font, bold: true, color: { argb: "FF2F7D6D" } };
+    } else {
+      ev.list.forEach(function (x, k) {
+        ws.getCell(rv + 1 + k, 1).value = "・" + x;
+        ws.getCell(rv + 1 + k, 1).font = { name: font, color: { argb: "FFC0392B" } };
+      });
+    }
+    return wb;
   }
 
   // ---------- イベント ----------
@@ -646,7 +800,7 @@
 
   document.getElementById("generate").addEventListener("click", generate);
   document.getElementById("regen").addEventListener("click", generate);
-  document.getElementById("csv").addEventListener("click", downloadCsv);
+  document.getElementById("xlsx").addEventListener("click", downloadXlsx);
   document.getElementById("print").addEventListener("click", function () { window.print(); });
   document.getElementById("reset-sample").addEventListener("click", function () {
     state = sampleData();
