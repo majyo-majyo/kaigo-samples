@@ -97,6 +97,13 @@
   .car table { width: 100%; margin-bottom: 6px; }
   .car caption { text-align: left; font-weight: 700; font-size: 13px; padding: 2px 0; }
   .car td.chk { width: 36px; }
+  table.plan { width: 100%; max-width: 820px; margin-bottom: 12px; }
+  table.plan caption { text-align: left; font-weight: 700; font-size: 16px; padding: 4px 0; }
+  table.plan td.drv { font-weight: 700; }
+  table.plan td.drv.none { color: var(--danger); background: var(--danger-weak); }
+  table.plan td.chk { width: 40px; }
+  .carno { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .carno.c0 { background: #2f7d6d; } .carno.c1 { background: #d97706; } .carno.c2 { background: #2b6cb0; } .carno.c3 { background: #8e44ad; }
   .wc { color: var(--sat); font-weight: 700; }
   .others { font-size: 13px; color: var(--muted); margin-top: 10px; }
   .others b { color: var(--text); }
@@ -517,33 +524,42 @@
       : "<p class='all-ok'>見直すところはありません。</p>";
   }
 
+  function drvCell(c) {
+    return "<td class='drv" + (c.driver ? "" : " none") + "'>" + (c.driver ? esc(c.driver) : "未定") + "</td>";
+  }
+
   function dayHtml(p) {
     var h = "<div class='day-page'>";
     h += "<div class='day-title'><span class='" + wdClass(p.w) + "'>" + esc(longLabel(p.date)) + "</span>　送迎表</div>";
     h += "<p class='day-sub'>送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" +
       (p.selfCome.length ? " / 送迎なし " + p.selfCome.length + "人" : "") + (p.absent.length ? " / 休み " + p.absent.length + "人" : "") + "</p>";
     if (p.checks.length) h += "<ul class='day-checks'>" + p.checks.map(function (c) { return "<li>⚠ " + esc(c.msg) + "</li>"; }).join("") + "</ul>";
-    h += "<div class='cars'>";
-    p.cars.forEach(function (c) {
-      h += "<div class='car" + (c.driver ? "" : " nodriver") + "'><div class='car-head'><b>" + esc(c.car.name) + "</b>" +
-        "<span>運転: <span class='drv" + (c.driver ? "" : " none") + "'>" + (c.driver ? esc(c.driver) : "未定") + "</span>　" + c.riders.length + "/" + c.car.seats + "人</span></div>";
-      h += "<table><caption>迎え(到着の目安 " + c.arrive + ")</caption><thead><tr><th>順</th><th>時刻</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
-        c.pick.map(function (x, i) {
-          return "<tr><td>" + (i + 1) + "</td><td>" + x.time + "</td><td class='l'>" + esc(x.u.name) + "</td><td>" + esc(x.u.area) + "</td><td>" +
-            (x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
-        }).join("") + "</tbody></table>";
-      h += "<table><caption>送り</caption><thead><tr><th>順</th><th>時刻</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
-        c.drop.map(function (x, i) {
-          return "<tr><td>" + (i + 1) + "</td><td>" + x.time + "</td><td class='l'>" + esc(x.u.name) + "</td><td>" + esc(x.u.area) + "</td><td>" +
-            (x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
+    // 車と運転手の一覧
+    h += "<div class='scroll'><table class='plan'><caption>車と運転手</caption><thead><tr><th class='l'>車</th><th>運転手</th><th>人数</th><th>迎え</th><th>送り</th></tr></thead><tbody>" +
+      p.cars.map(function (c, k) {
+        return "<tr><td class='l'><span class='carno c" + (k % 4) + "'></span>" + esc(c.car.name) + "</td>" + drvCell(c) +
+          "<td>" + c.riders.length + "/" + c.car.seats + "人</td>" +
+          "<td>" + c.pick[0].time + "〜" + c.arrive + "着</td><td>" + state.dropStart.replace(/^0/, "") + "発〜" + c.drop[c.drop.length - 1].time + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+    // 迎え・送りを、時刻・車・運転手がまとめて分かる1つの表に
+    function timeTable(title, key) {
+      var rows = [];
+      p.cars.forEach(function (c, k) { c[key].forEach(function (x) { rows.push({ x: x, c: c, k: k }); }); });
+      rows.sort(function (a, b) { return toMin(a.x.time) - toMin(b.x.time) || a.k - b.k; });
+      return "<div class='scroll'><table class='plan'><caption>" + title + "</caption><thead><tr><th>時刻</th><th class='l'>車</th><th>運転手</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
+        rows.map(function (r) {
+          return "<tr><td><b>" + r.x.time + "</b></td><td class='l'><span class='carno c" + (r.k % 4) + "'></span>" + esc(r.c.car.name) + "</td>" + drvCell(r.c) +
+            "<td class='l'>" + esc(r.x.u.name) + "</td><td>" + esc(r.x.u.area) + "</td><td>" +
+            (r.x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
         }).join("") + "</tbody></table></div>";
-    });
+    }
+    h += timeTable("迎え", "pick");
+    h += timeTable("送り", "drop");
     if (p.left.length) {
       h += "<div class='overflow'><b>車に乗れていない人</b><br>" + p.left.map(function (x) {
         return esc(x.u.name) + "(" + esc(x.u.area) + (x.u.wheelchair ? "・車いす" : "") + ")";
       }).join("、") + "</div>";
     }
-    h += "</div>";
     h += "<p class='others'>" +
       (p.selfCome.length ? "<b>送迎なし:</b> " + p.selfCome.map(function (u) { return esc(u.name); }).join("、") + "　" : "") +
       (p.absent.length ? "<b>休み:</b> " + p.absent.map(function (u) { return esc(u.name); }).join("、") : "") + "</p>";
@@ -603,7 +619,6 @@
     var thin = { style: "thin", color: { argb: "FF595959" } };
     var border = { top: thin, left: thin, bottom: thin, right: thin };
     var headFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F2F5" } };
-    var carFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE3F2EE" } };
     var redFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDECEA" } };
     var wb = new ExcelJS.Workbook();
     var monthText = t.y + "年" + t.m + "月";
@@ -632,47 +647,64 @@
       });
     }
 
-    // 送迎表(1日1ページ): 迎え=A〜F列、送り=H〜M列
-    var ws = sheet("送迎表", [4, 6, 13, 7, 7, 6, 2, 4, 6, 13, 7, 7, 6]);
+    // 送迎表(1日1ページ): 車と運転手 → 迎え → 送り を時刻順で
+    var ws = sheet("送迎表", [8, 26, 10, 13, 12, 8, 6]);
     var r = 1;
     res.days.forEach(function (p, di) {
       if (di > 0) { ws.getRow(r - 1).addPageBreak(); }
-      ws.mergeCells(r, 1, r, 13);
+      ws.mergeCells(r, 1, r, 7);
       cellsRow(ws, r, [longLabel(p.date) + "　送迎表"], { border: false, size: 14, bold: true, left: [0], height: 26, color: p.w === "土" ? "FF2B6CB0" : "FF1F2933" });
       r++;
-      ws.mergeCells(r, 1, r, 13);
+      ws.mergeCells(r, 1, r, 7);
       cellsRow(ws, r, ["送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" + (p.selfCome.length ? " / 送迎なし: " + p.selfCome.map(function (u) { return u.name; }).join("、") : "") +
         (p.absent.length ? " / 休み: " + p.absent.map(function (u) { return u.name; }).join("、") : "")], { border: false, size: 9, left: [0], color: "FF616E7C", wrap: true, height: 28 });
       r++;
       p.checks.forEach(function (c) {
-        ws.mergeCells(r, 1, r, 13);
+        ws.mergeCells(r, 1, r, 7);
         cellsRow(ws, r, ["⚠ " + c.msg], { border: false, bold: true, left: [0], color: "FFC0392B", fill: redFill, wrap: true, height: 22 });
         r++;
       });
+      // 車と運転手
+      r++;
+      ws.mergeCells(r, 1, r, 7);
+      cellsRow(ws, r, ["車と運転手"], { border: false, bold: true, size: 11, left: [0], height: 22 });
+      r++;
+      cellsRow(ws, r, ["車", null, "運転手", "人数", "迎え", null, "送り"], { bold: true, fill: headFill });
+      ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 5, r, 6);
+      r++;
       p.cars.forEach(function (c) {
-        r++;
-        ws.mergeCells(r, 1, r, 13);
-        cellsRow(ws, r, [c.car.name + "　運転: " + (c.driver || "未定") + "　" + c.riders.length + "/" + c.car.seats + "人"], {
-          bold: true, left: [0], size: 11, fill: c.driver ? carFill : redFill, color: c.driver ? "FF1F2933" : "FFC0392B", height: 22
+        cellsRow(ws, r, [c.car.name, null, c.driver || "未定", c.riders.length + "/" + c.car.seats + "人", c.pick[0].time + "〜" + c.arrive + "着", null,
+          state.dropStart.replace(/^0/, "") + "発〜" + c.drop[c.drop.length - 1].time], {
+          left: [0], height: 22, fill: c.driver ? null : redFill, colors: [null, null, c.driver ? null : "FFC0392B"]
         });
+        ws.getCell(r, 3).font = { name: font, size: 10, bold: true, color: { argb: c.driver ? "FF1F2933" : "FFC0392B" } };
+        ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 5, r, 6);
         r++;
-        var head = ["順", "時刻", "迎え(到着 " + c.arrive + ")", "地区", "", "確認"];
-        var headD = ["順", "時刻", "送り", "地区", "", "確認"];
-        cellsRow(ws, r, head.concat([null], headD), { bold: true, fill: headFill });
-        ws.getCell(r, 7).border = {}; ws.getCell(r, 7).fill = { type: "pattern", pattern: "none" };
+      });
+      // 迎え・送り(時刻順。時刻・車・運転手がまとめて分かる)
+      [["迎え", "pick"], ["送り", "drop"]].forEach(function (t2) {
+        var rows = [];
+        p.cars.forEach(function (c, k) { c[t2[1]].forEach(function (x) { rows.push({ x: x, c: c, k: k }); }); });
+        rows.sort(function (a, b) { return toMin(a.x.time) - toMin(b.x.time) || a.k - b.k; });
         r++;
-        for (var i = 0; i < c.riders.length; i++) {
-          var a = c.pick[i], b = c.drop[i];
-          cellsRow(ws, r, [i + 1, a.time, a.u.name, a.u.area, a.u.wheelchair ? "車いす" : "", "", null, i + 1, b.time, b.u.name, b.u.area, b.u.wheelchair ? "車いす" : "", ""], {
-            left: [2, 9], height: 22, colors: [null, null, null, null, "FF2B6CB0", null, null, null, null, null, null, "FF2B6CB0"]
+        ws.mergeCells(r, 1, r, 7);
+        cellsRow(ws, r, [t2[0]], { border: false, bold: true, size: 11, left: [0], height: 22 });
+        r++;
+        cellsRow(ws, r, ["時刻", "車", "運転手", "名前", "地区", "", "確認"], { bold: true, fill: headFill });
+        r++;
+        rows.forEach(function (x) {
+          cellsRow(ws, r, [x.x.time, x.c.car.name, x.c.driver || "未定", x.x.u.name, x.x.u.area, x.x.u.wheelchair ? "車いす" : "", ""], {
+            left: [1, 3], height: 22, colors: [null, null, x.c.driver ? null : "FFC0392B", null, null, "FF2B6CB0"]
           });
-          ws.getCell(r, 7).border = {};
+          ws.getCell(r, 1).font = { name: font, size: 10, bold: true };
+          ws.getCell(r, 3).font = { name: font, size: 10, bold: true, color: { argb: x.c.driver ? "FF1F2933" : "FFC0392B" } };
+          if (!x.c.driver) ws.getCell(r, 3).fill = redFill;
           r++;
-        }
+        });
       });
       if (p.left.length) {
         r++;
-        ws.mergeCells(r, 1, r, 13);
+        ws.mergeCells(r, 1, r, 7);
         cellsRow(ws, r, ["車に乗れていない人: " + p.left.map(function (x) { return x.u.name + (x.u.wheelchair ? "(車いす)" : ""); }).join("、")], {
           bold: true, left: [0], color: "FFC0392B", fill: redFill, height: 22
         });
@@ -680,7 +712,7 @@
       }
       r += 2;
     });
-    ws.pageSetup.printArea = "A1:M" + r;
+    ws.pageSetup.printArea = "A1:G" + r;
 
     // 見直すところ
     var ws2 = sheet("見直すところ", [12, 12, 70]);
