@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デイサービス送迎表(見本)</title>
+<meta name="description" content="通所介護(デイサービス)の利用予定と車・ドライバーから、日ごとの送迎表をボタン一つで作る見本です。">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1f2933;
+    --muted: #616e7c;
+    --line: #d9dee4;
+    --accent: #2f7d6d;
+    --accent-weak: #e3f2ee;
+    --danger: #c0392b;
+    --danger-weak: #fdecea;
+    --warn: #9a6700;
+    --warn-weak: #fff4d6;
+    --sat: #2b6cb0;
+    --sun: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: 15px; line-height: 1.6;
+  }
+  header { background: var(--accent); color: #fff; padding: 20px 16px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; opacity: .92; font-size: 14px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  section.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  h2 { font-size: 18px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  h2 .step {
+    display: inline-flex; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 14px;
+    align-items: center; justify-content: center;
+  }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .notice { background: var(--accent-weak); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 16px; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid var(--line); padding: 4px 8px; text-align: center; white-space: nowrap; }
+  th { background: #f0f2f5; font-weight: 600; font-size: 13px; }
+  td.l, th.l { text-align: left; }
+  input, select, button { font: inherit; }
+  input[type=text], input[type=number], input[type=month], input[type=time], input[type=date], select {
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: #fff;
+  }
+  input.name { width: 110px; }
+  input.area { width: 70px; }
+  input.n { width: 56px; }
+  input.wide { width: 260px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .field { display: flex; align-items: center; gap: 6px; }
+  .days label { margin-right: 4px; font-size: 13px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+  button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: #f0f2f5; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-size: 17px; font-weight: 700; padding: 12px 28px; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.small { padding: 2px 8px; font-size: 13px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .sat { color: var(--sat); }
+  .sun { color: var(--sun); }
+  #result { display: none; }
+  .result-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 8px; }
+  .stat { background: #f0f2f5; border-radius: 8px; padding: 8px 14px; }
+  .stat b { font-size: 20px; }
+  .stat.bad b { color: var(--danger); }
+  .badge { display: inline-block; font-size: 12px; border-radius: 4px; padding: 0 6px; background: var(--warn-weak); color: var(--warn); font-weight: 700; }
+  .badge.red { background: var(--danger-weak); color: var(--danger); }
+  .checks td.msg { white-space: normal; text-align: left; min-width: 280px; }
+  .checks tr.link { cursor: pointer; }
+  .checks tr.link:hover td { background: #f7f9fb; }
+  .all-ok { color: var(--accent); font-weight: 700; }
+  .daynav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 4px; }
+  .daynav select { font-size: 16px; font-weight: 700; }
+  .day-title { font-size: 18px; font-weight: 700; margin: 8px 0 2px; }
+  .day-sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  .day-checks { margin: 0 0 10px; padding: 0; list-style: none; }
+  .day-checks li { background: var(--danger-weak); color: var(--danger); border-radius: 6px; padding: 4px 10px; margin-bottom: 4px; font-size: 14px; font-weight: 700; }
+  .cars { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+  .car { border: 2px solid var(--accent); border-radius: 10px; padding: 10px; }
+  .car.nodriver { border-color: var(--danger); }
+  .car-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .car-head b { font-size: 16px; }
+  .car-head .drv { font-weight: 700; }
+  .car-head .drv.none { color: var(--danger); }
+  .car table { width: 100%; margin-bottom: 6px; }
+  .car caption { text-align: left; font-weight: 700; font-size: 13px; padding: 2px 0; }
+  .car td.chk { width: 36px; }
+  .wc { color: var(--sat); font-weight: 700; }
+  .others { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .others b { color: var(--text); }
+  .overflow { border: 2px solid var(--danger); border-radius: 10px; padding: 10px; background: var(--danger-weak); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+  .print-only { display: none; }
+  .day-page + .day-page { margin-top: 24px; }
+  @page { size: A4 portrait; margin: 10mm; }
+  @media print {
+    header, .no-print, footer { display: none !important; }
+    body { background: #fff; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    main { max-width: none; padding: 0; }
+    section.card { border: none; padding: 0; margin: 0; }
+    #result { display: block !important; }
+    .print-only { display: block; }
+    .scroll { overflow: visible; }
+    th, td { padding: 2px 5px; border-color: #595959; }
+    .cars { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .car { break-inside: avoid; }
+    .day-page + .day-page { break-before: page; margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>デイサービス送迎表(見本)</h1>
+  <p>利用予定と車・ドライバーから、日ごとの送迎表をボタン一つで作ります。</p>
+</header>
+
+<main>
+  <div class="notice no-print">
+    架空のサンプルデータ(利用者15人・車3台・ドライバー4人・2026年10月分)が入っています。そのまま「送迎表を作る」を押して試せます。<br>
+    入力したデータはこのブラウザの中だけで使われ、外部には送信されません。
+  </div>
+
+  <section class="card no-print">
+    <h2><span class="step">1</span>対象月と時刻の目安</h2>
+    <div class="row">
+      <label class="field">対象月 <input type="month" id="month"></label>
+      <label class="field">迎えの1人目 <input type="time" id="pickStart"></label>
+      <label class="field">送りの出発 <input type="time" id="dropStart"></label>
+      <label class="field">1人あたり <input type="number" id="interval" class="n" min="1" max="60"> 分</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="field">地区を回る順番 <input type="text" id="areaOrder" class="wide" placeholder="北町,東町,南町,西町"></label>
+      <span class="hint" style="margin:0">迎えはこの順番(遠い地区から)、送りはその逆の順番で回ります。</span>
+    </div>
+  </section>
+
+  <section class="card no-print">
+    <h2><span class="step">2</span>利用者</h2>
+    <p class="hint">送迎「あり」の人だけが送迎表に載ります。「順」は同じ地区の中で迎えに行く順番です。</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>名前</th><th>利用する曜日</th><th>送迎</th><th>地区</th><th>順</th><th>車いす</th><th></th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button id="add-user">+ 利用者を追加</button></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card no-print">
+      <h2><span class="step">3</span>車</h2>
+      <p class="hint">上の車から順に使います。車いすの人は「車いす」の台数がある車(リフト付き)に乗せます。</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>車</th><th>乗れる人数</th><th>うち車いす</th><th></th></tr></thead>
+          <tbody id="cars-body"></tbody>
+        </table>
+      </div>
+      <div class="actions"><button id="add-car">+ 車を追加</button></div>
+    </section>
+
+    <section class="card no-print">
+      <h2><span class="step">4</span>ドライバー</h2>
+      <p class="hint">その曜日に運転できる人を、上から順に車へ割り当てます。</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>名前</th><th>運転できる曜日</th><th></th></tr></thead>
+          <tbody id="drivers-body"></tbody>
+        </table>
+      </div>
+      <div class="actions"><button id="add-driver">+ ドライバーを追加</button></div>
+    </section>
+  </div>
+
+  <section class="card no-print">
+    <h2><span class="step">5</span>休み・振替の連絡</h2>
+    <p class="hint">電話で受けた「休みます」「別の日に来ます」をここに入れるだけで、その日の送迎表に反映されます。</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>日付</th><th>利用者</th><th>連絡</th><th></th></tr></thead>
+        <tbody id="changes-body"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button id="add-change">+ 連絡を追加</button></div>
+  </section>
+
+  <section class="card no-print" style="text-align:center">
+    <button class="primary" id="run">送迎表を作る</button>
+    <div class="actions" style="justify-content:center">
+      <button id="reset-sample" class="small">サンプルデータに戻す</button>
+    </div>
+  </section>
+
+  <section class="card" id="result">
+    <h2 class="no-print">送迎表</h2>
+    <div class="result-head no-print">
+      <div class="stat">作るのにかかった時間 <b id="elapsed">-</b></div>
+      <div class="stat">送迎する日 <b id="stat-days">-</b></div>
+      <div class="stat" id="stat-checks-box">見直すところ <b id="stat-checks">-</b></div>
+    </div>
+
+    <div class="no-print">
+      <h3>1か月の中で見直すところ</h3>
+      <div id="checks"></div>
+    </div>
+
+    <div class="daynav no-print">
+      <button id="prev-day" class="small">◀ 前の日</button>
+      <select id="day-select"></select>
+      <button id="next-day" class="small">次の日 ▶</button>
+    </div>
+    <div id="day-view"></div>
+
+    <div class="actions no-print">
+      <button id="print-day">この日を印刷する</button>
+      <button id="print-month">1か月分を印刷する(1日1枚)</button>
+      <button id="xlsx">Excelで保存(1か月分・1日1枚でA4印刷できます)</button>
+    </div>
+  </section>
+</main>
+
+<footer>業務効率化の見本 / データはすべて架空です</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "kaigo-sougei-sample-v1";
+  var WD = ["日", "月", "火", "水", "木", "金", "土"];
+  var OPEN_DAYS = ["月", "火", "水", "木", "金", "土"]; // 日曜は休み
+
+  // ---------- サンプルデータ(架空。利用者は「実績の集計」の見本と同じ15人) ----------
+  // [名前, 利用する曜日, 送迎, 地区, 地区の中の順, 車いす]
+  var SAMPLE_USERS = [
+    ["青木 静子", "月木", true, "北町", 1, false],
+    ["石井 茂", "火金", true, "南町", 1, false],
+    ["上田 和子", "月水金", true, "東町", 1, false],
+    ["江口 正男", "水", false, "中央", 1, false],
+    ["大野 トミ", "火木土", true, "西町", 1, false],
+    ["岡本 勇", "月木", true, "北町", 2, false],
+    ["片山 春江", "月水金", true, "南町", 2, true],
+    ["木村 清", "火金", true, "東町", 2, false],
+    ["久保 フミ", "水土", false, "中央", 2, false],
+    ["小西 義雄", "月木", true, "西町", 2, true],
+    ["斉藤 千代", "火木", true, "北町", 3, false],
+    ["島田 博", "金", false, "中央", 3, false],
+    ["杉山 ヨシ", "月水金", true, "南町", 3, true],
+    ["高木 実", "火土", true, "東町", 3, false],
+    ["竹内 花江", "水土", true, "西町", 3, true]
+  ];
+  var SAMPLE_CARS = [["1号車 ハイエース(リフト付き)", 6, 2], ["2号車 軽(リフト付き)", 3, 1], ["3号車 ワゴン", 7, 0]];
+  var SAMPLE_DRIVERS = [["山本", "月火水木金"], ["中川", "月水金"], ["西田", "火木土"], ["野村", "月火木金"]];
+  // 見直すところが出るように、わざと入れてある連絡:
+  //   10/17(土) 振替が多く車が2台要るが、土曜に運転できるのは1人 → ドライバー不足
+  //   10/22(木) 石井さんの休み連絡(木曜は利用日ではない) → 予定にない休み
+  //   10/26(月) 竹内さん(車いす)の振替で、車いすが4人・リフトの席は3つ → 乗れない
+  var SAMPLE_CHANGES = [
+    ["2026-10-05", "青木 静子", "休み"],
+    ["2026-10-08", "片山 春江", "振替"],
+    ["2026-10-17", "石井 茂", "振替"],
+    ["2026-10-17", "木村 清", "振替"],
+    ["2026-10-17", "斉藤 千代", "振替"],
+    ["2026-10-17", "岡本 勇", "振替"],
+    ["2026-10-22", "石井 茂", "休み"],
+    ["2026-10-26", "竹内 花江", "振替"]
+  ];
+
+  function sampleData() {
+    return {
+      month: "2026-10", pickStart: "08:30", dropStart: "16:00", interval: 10,
+      areaOrder: "北町,東町,南町,西町,中央",
+      users: SAMPLE_USERS.map(function (u) {
+        return { name: u[0], days: u[1].split(""), transport: u[2], area: u[3], order: u[4], wheelchair: u[5] };
+      }),
+      cars: SAMPLE_CARS.map(function (c) { return { name: c[0], seats: c[1], wc: c[2] }; }),
+      drivers: SAMPLE_DRIVERS.map(function (d) { return { name: d[0], days: d[1].split("") }; }),
+      changes: SAMPLE_CHANGES.map(function (c) { return { date: c[0], name: c[1], kind: c[2] }; })
+    };
+  }
+
+  // ---------- 状態 ----------
+  var state = load() || sampleData();
+  var lastResult = null;
+  var currentDay = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* 保存できなくても動く */ }
+  }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function ym() { var p = state.month.split("-"); return { y: +p[0], m: +p[1] }; }
+  function daysInMonth() { var t = ym(); return new Date(t.y, t.m, 0).getDate(); }
+  function wdOf(dateStr) { var p = dateStr.split("-"); return WD[new Date(+p[0], +p[1] - 1, +p[2]).getDay()]; }
+  function dateOf(d) { return state.month + "-" + pad(d); }
+  function label(dateStr) { var p = dateStr.split("-"); return (+p[1]) + "/" + (+p[2]) + "(" + wdOf(dateStr) + ")"; }
+  function longLabel(dateStr) { var p = dateStr.split("-"); return p[0] + "年" + (+p[1]) + "月" + (+p[2]) + "日(" + wdOf(dateStr) + ")"; }
+  function wdClass(w) { return w === "土" ? "sat" : w === "日" ? "sun" : ""; }
+  function toMin(hhmm) { var p = String(hhmm || "0:0").split(":"); return (+p[0]) * 60 + (+p[1] || 0); }
+  function toTime(min) { return Math.floor(min / 60) + ":" + pad(min % 60); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function areaList() { return state.areaOrder.split(/[,、，\s]+/).filter(Boolean); }
+
+  // ---------- 入力画面 ----------
+  function renderInputs() {
+    document.getElementById("month").value = state.month;
+    document.getElementById("pickStart").value = state.pickStart;
+    document.getElementById("dropStart").value = state.dropStart;
+    document.getElementById("interval").value = state.interval;
+    document.getElementById("areaOrder").value = state.areaOrder;
+    renderUsers(); renderCars(); renderDrivers(); renderChanges();
+  }
+
+  function dayBoxes(kind, i, days) {
+    return '<td class="days">' + OPEN_DAYS.map(function (w) {
+      return '<label><input type="checkbox" data-t="' + kind + '" data-i="' + i + '" data-k="day" data-w="' + w + '"' +
+        (days.indexOf(w) >= 0 ? " checked" : "") + ">" + w + "</label>";
+    }).join("") + "</td>";
+  }
+  function del(kind, i) { return '<td><button class="small" data-t="' + kind + '" data-del="' + i + '">削除</button></td>'; }
+
+  function renderUsers() {
+    document.getElementById("users-body").innerHTML = state.users.map(function (u, i) {
+      return "<tr>" +
+        '<td><input type="text" class="name" data-t="users" data-i="' + i + '" data-k="name" value="' + esc(u.name) + '"></td>' +
+        dayBoxes("users", i, u.days) +
+        '<td><label><input type="checkbox" data-t="users" data-i="' + i + '" data-k="transport"' + (u.transport ? " checked" : "") + "> あり</label></td>" +
+        '<td><input type="text" class="area" data-t="users" data-i="' + i + '" data-k="area" value="' + esc(u.area) + '"></td>' +
+        '<td><input type="number" class="n" min="1" max="99" data-t="users" data-i="' + i + '" data-k="order" value="' + u.order + '"></td>' +
+        '<td><label><input type="checkbox" data-t="users" data-i="' + i + '" data-k="wheelchair"' + (u.wheelchair ? " checked" : "") + "> 車いす</label></td>" +
+        del("users", i) + "</tr>";
+    }).join("");
+  }
+  function renderCars() {
+    document.getElementById("cars-body").innerHTML = state.cars.map(function (c, i) {
+      return "<tr>" +
+        '<td><input type="text" style="width:200px" data-t="cars" data-i="' + i + '" data-k="name" value="' + esc(c.name) + '"></td>' +
+        '<td><input type="number" class="n" min="1" max="30" data-t="cars" data-i="' + i + '" data-k="seats" value="' + c.seats + '"> 人</td>' +
+        '<td><input type="number" class="n" min="0" max="10" data-t="cars" data-i="' + i + '" data-k="wc" value="' + c.wc + '"> 台</td>' +
+        del("cars", i) + "</tr>";
+    }).join("");
+  }
+  function renderDrivers() {
+    document.getElementById("drivers-body").innerHTML = state.drivers.map(function (d, i) {
+      return "<tr>" +
+        '<td><input type="text" class="name" data-t="drivers" data-i="' + i + '" data-k="name" value="' + esc(d.name) + '"></td>' +
+        dayBoxes("drivers", i, d.days) + del("drivers", i) + "</tr>";
+    }).join("");
+  }
+  function renderChanges() {
+    document.getElementById("changes-body").innerHTML = state.changes.map(function (c, i) {
+      var names = state.users.map(function (u) { return u.name; });
+      if (names.indexOf(c.name) < 0) names.unshift(c.name);
+      return "<tr>" +
+        '<td><input type="date" data-t="changes" data-i="' + i + '" data-k="date" value="' + esc(c.date) + '"></td>' +
+        '<td><select data-t="changes" data-i="' + i + '" data-k="name">' + names.map(function (n) {
+          return "<option" + (n === c.name ? " selected" : "") + ">" + esc(n) + "</option>";
+        }).join("") + "</select></td>" +
+        '<td><select data-t="changes" data-i="' + i + '" data-k="kind">' + ["休み", "振替"].map(function (k) {
+          return "<option value='" + k + "'" + (k === c.kind ? " selected" : "") + ">" + (k === "休み" ? "休み" : "振替で来る") + "</option>";
+        }).join("") + "</select></td>" +
+        del("changes", i) + "</tr>";
+    }).join("");
+  }
+
+  // ---------- 送迎表を作る ----------
+  function planDay(ds) {
+    var w = wdOf(ds);
+    var areas = areaList();
+    function areaRank(a) { var k = areas.indexOf(a); return k < 0 ? areas.length : k; }
+    var checks = [];
+
+    // その日の来所者
+    var off = {}, extra = {};
+    state.changes.forEach(function (c) {
+      if (c.date !== ds) return;
+      if (c.kind === "休み") off[c.name] = true; else extra[c.name] = true;
+    });
+    var byName = {};
+    state.users.forEach(function (u) { byName[u.name] = u; });
+    Object.keys(off).forEach(function (n) {
+      var u = byName[n];
+      if (!u) checks.push({ kind: "連絡", msg: n + "さんの休みの連絡: 利用者の一覧にない名前です" });
+      else if (u.days.indexOf(w) < 0 && !extra[n]) checks.push({ kind: "連絡", msg: n + "さんの休みの連絡: " + w + "曜日は利用する日ではありません(日付の間違い?)" });
+    });
+    var visitors = state.users.filter(function (u) {
+      return !off[u.name] && (u.days.indexOf(w) >= 0 || extra[u.name]);
+    });
+    Object.keys(extra).forEach(function (n) {
+      if (!byName[n]) checks.push({ kind: "連絡", msg: n + "さんの振替の連絡: 利用者の一覧にない名前です" });
+    });
+    var riders = visitors.filter(function (u) { return u.transport; });
+    var selfCome = visitors.filter(function (u) { return !u.transport; });
+    var absent = state.users.filter(function (u) { return off[u.name] && u.days.indexOf(w) >= 0; });
+    riders.sort(function (a, b) {
+      return areaRank(a.area) - areaRank(b.area) || (a.order - b.order) || (a.name < b.name ? -1 : 1);
+    });
+
+    // 車に割り当てる
+    var cars = state.cars.map(function (c) { return { car: c, riders: [], wcUsed: 0 }; });
+    function room(c) { return c.car.seats - c.riders.length; }
+    var left = [];
+    // 1) 車いすの人をリフト付きの車へ
+    riders.filter(function (u) { return u.wheelchair; }).forEach(function (u) {
+      var hit = cars.filter(function (c) { return c.wcUsed < c.car.wc && room(c) > 0; });
+      var same = hit.filter(function (c) { return c.riders.some(function (r) { return r.area === u.area; }); });
+      var c = same[0] || hit[0];
+      if (c) { c.riders.push(u); c.wcUsed++; } else left.push({ u: u, why: "wc" });
+    });
+    // 2) 残りの人を地区ごとにまとめて
+    var groups = [];
+    riders.filter(function (u) { return !u.wheelchair; }).forEach(function (u) {
+      var g = groups[groups.length - 1];
+      if (!g || g.area !== u.area) groups.push(g = { area: u.area, list: [] });
+      g.list.push(u);
+    });
+    groups.forEach(function (g) {
+      var need = g.list.length;
+      var used = function (c) { return c.riders.length > 0; };
+      var sameArea = cars.filter(function (c) { return c.riders.some(function (r) { return r.area === g.area; }) && room(c) >= need; });
+      var inUse = cars.filter(function (c) { return used(c) && room(c) >= need; });
+      var fresh = cars.filter(function (c) { return !used(c) && room(c) >= need; });
+      var c = sameArea[0] || inUse[0] || fresh[0];
+      if (c) { g.list.forEach(function (u) { c.riders.push(u); }); return; }
+      // 1台に乗り切らない地区は、空いている車へ分けて乗せる
+      g.list.forEach(function (u) {
+        var any = cars.filter(function (x) { return used(x) && room(x) > 0; })[0] || cars.filter(function (x) { return room(x) > 0; })[0];
+        if (any) any.riders.push(u); else left.push({ u: u, why: "seat" });
+      });
+    });
+    left.forEach(function (x) {
+      checks.push({
+        kind: x.why === "wc" ? "車いす" : "定員",
+        msg: x.u.name + "さん: " + (x.why === "wc" ? "車いすで乗れる車(リフト付き)の空きがありません" : "どの車にも乗り切れません")
+      });
+    });
+
+    // ドライバーを割り当てる・順番と時刻を決める
+    var drivers = state.drivers.filter(function (d) { return d.days.indexOf(w) >= 0; });
+    var usedCars = cars.filter(function (c) { return c.riders.length; });
+    var pick0 = toMin(state.pickStart), drop0 = toMin(state.dropStart), step = Math.max(1, +state.interval || 10);
+    usedCars.forEach(function (c, k) {
+      c.driver = drivers[k] ? drivers[k].name : "";
+      if (!c.driver) checks.push({ kind: "ドライバー", msg: c.car.name + "を運転できる人がいません(" + w + "曜日に運転できるのは " + drivers.length + "人・車は " + usedCars.length + "台要ります)" });
+      c.riders.sort(function (a, b) { return areaRank(a.area) - areaRank(b.area) || (a.order - b.order); });
+      c.pick = c.riders.map(function (u, i) { return { u: u, time: toTime(pick0 + i * step) }; });
+      c.arrive = toTime(pick0 + c.riders.length * step);
+      c.drop = c.riders.slice().reverse().map(function (u, i) { return { u: u, time: toTime(drop0 + (i + 1) * step) }; });
+    });
+
+    return { date: ds, w: w, cars: usedCars, left: left, selfCome: selfCome, absent: absent, riders: riders.length, checks: checks };
+  }
+
+  function analyze() {
+    var N = daysInMonth(), days = [];
+    for (var d = 1; d <= N; d++) {
+      var ds = dateOf(d);
+      if (wdOf(ds) === "日") continue;
+      days.push(planDay(ds));
+    }
+    // 対象月以外の日付の連絡
+    var extraChecks = [];
+    state.changes.forEach(function (c) {
+      if (c.date.slice(0, 7) !== state.month) extraChecks.push({ date: c.date, kind: "連絡", msg: c.name + "さんの連絡: 対象月ではない日付です" });
+      else if (wdOf(c.date) === "日") extraChecks.push({ date: c.date, kind: "連絡", msg: c.name + "さんの連絡: 日曜日(休業日)の日付です" });
+    });
+    var checks = [];
+    days.forEach(function (p) { p.checks.forEach(function (c) { checks.push({ date: p.date, kind: c.kind, msg: c.msg }); }); });
+    return { days: days, checks: checks.concat(extraChecks) };
+  }
+
+  function run() {
+    var t0 = performance.now();
+    var res = analyze();
+    var sec = (performance.now() - t0) / 1000;
+    lastResult = res;
+    document.getElementById("elapsed").textContent = sec < 0.1 ? "0.1秒未満" : sec.toFixed(1) + "秒";
+    document.getElementById("stat-days").textContent = res.days.length + "日";
+    document.getElementById("stat-checks").textContent = res.checks.length + "件";
+    document.getElementById("stat-checks-box").className = "stat" + (res.checks.length ? " bad" : "");
+    renderChecks(res);
+    document.getElementById("day-select").innerHTML = res.days.map(function (p) {
+      return "<option value='" + p.date + "'>" + esc(label(p.date)) + (p.checks.length ? " ⚠" : "") + "</option>";
+    }).join("");
+    if (!currentDay || !res.days.some(function (p) { return p.date === currentDay; })) currentDay = res.days.length ? res.days[0].date : null;
+    showDay(currentDay);
+    var el = document.getElementById("result");
+    el.style.display = "block";
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderChecks(res) {
+    document.getElementById("checks").innerHTML = res.checks.length
+      ? "<div class='scroll'><table class='checks'><thead><tr><th>日付</th><th>種類</th><th class='l'>内容</th></tr></thead><tbody>" +
+        res.checks.map(function (c) {
+          return "<tr class='link' data-date='" + c.date + "'><td>" + esc(label(c.date)) + "</td><td><span class='badge red'>" + esc(c.kind) +
+            "</span></td><td class='msg'>" + esc(c.msg) + "</td></tr>";
+        }).join("") + "</tbody></table></div><p class='hint'>行を押すと、その日の送迎表を表示します。</p>"
+      : "<p class='all-ok'>見直すところはありません。</p>";
+  }
+
+  function dayHtml(p) {
+    var h = "<div class='day-page'>";
+    h += "<div class='day-title'><span class='" + wdClass(p.w) + "'>" + esc(longLabel(p.date)) + "</span>　送迎表</div>";
+    h += "<p class='day-sub'>送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" +
+      (p.selfCome.length ? " / 送迎なし " + p.selfCome.length + "人" : "") + (p.absent.length ? " / 休み " + p.absent.length + "人" : "") + "</p>";
+    if (p.checks.length) h += "<ul class='day-checks'>" + p.checks.map(function (c) { return "<li>⚠ " + esc(c.msg) + "</li>"; }).join("") + "</ul>";
+    h += "<div class='cars'>";
+    p.cars.forEach(function (c) {
+      h += "<div class='car" + (c.driver ? "" : " nodriver") + "'><div class='car-head'><b>" + esc(c.car.name) + "</b>" +
+        "<span>運転: <span class='drv" + (c.driver ? "" : " none") + "'>" + (c.driver ? esc(c.driver) : "未定") + "</span>　" + c.riders.length + "/" + c.car.seats + "人</span></div>";
+      h += "<table><caption>迎え(到着の目安 " + c.arrive + ")</caption><thead><tr><th>順</th><th>時刻</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
+        c.pick.map(function (x, i) {
+          return "<tr><td>" + (i + 1) + "</td><td>" + x.time + "</td><td class='l'>" + esc(x.u.name) + "</td><td>" + esc(x.u.area) + "</td><td>" +
+            (x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
+        }).join("") + "</tbody></table>";
+      h += "<table><caption>送り</caption><thead><tr><th>順</th><th>時刻</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
+        c.drop.map(function (x, i) {
+          return "<tr><td>" + (i + 1) + "</td><td>" + x.time + "</td><td class='l'>" + esc(x.u.name) + "</td><td>" + esc(x.u.area) + "</td><td>" +
+            (x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
+        }).join("") + "</tbody></table></div>";
+    });
+    if (p.left.length) {
+      h += "<div class='overflow'><b>車に乗れていない人</b><br>" + p.left.map(function (x) {
+        return esc(x.u.name) + "(" + esc(x.u.area) + (x.u.wheelchair ? "・車いす" : "") + ")";
+      }).join("、") + "</div>";
+    }
+    h += "</div>";
+    h += "<p class='others'>" +
+      (p.selfCome.length ? "<b>送迎なし:</b> " + p.selfCome.map(function (u) { return esc(u.name); }).join("、") + "　" : "") +
+      (p.absent.length ? "<b>休み:</b> " + p.absent.map(function (u) { return esc(u.name); }).join("、") : "") + "</p>";
+    return h + "</div>";
+  }
+
+  function showDay(ds) {
+    if (!lastResult || !ds) return;
+    currentDay = ds;
+    document.getElementById("day-select").value = ds;
+    var p = lastResult.days.filter(function (x) { return x.date === ds; })[0];
+    document.getElementById("day-view").innerHTML = p ? dayHtml(p) : "";
+  }
+  function moveDay(k) {
+    var list = lastResult.days.map(function (p) { return p.date; });
+    var i = list.indexOf(currentDay) + k;
+    if (i >= 0 && i < list.length) showDay(list[i]);
+  }
+  function printMonth() {
+    var view = document.getElementById("day-view");
+    view.innerHTML = lastResult.days.map(dayHtml).join("");
+    window.print();
+    showDay(currentDay);
+  }
+
+  // ---------- Excelで保存 ----------
+  var EXCELJS_URL = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
+  function loadExcelJs() {
+    if (window.ExcelJS) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = EXCELJS_URL;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error("Excel保存の部品を読み込めませんでした")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function downloadXlsx() {
+    if (!lastResult) return;
+    var btn = document.getElementById("xlsx"), labelText = btn.textContent;
+    btn.disabled = true; btn.textContent = "Excelを作っています…";
+    loadExcelJs().then(function () { return buildXlsx(lastResult).xlsx.writeBuffer(); }).then(function (buf) {
+      var blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "送迎表_" + state.month + ".xlsx";
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }).catch(function (e) {
+      alert(e.message + "。インターネットにつながっているか確認してください。");
+    }).then(function () { btn.disabled = false; btn.textContent = labelText; });
+  }
+
+  function buildXlsx(res) {
+    var t = ym(), font = "Meiryo UI";
+    var thin = { style: "thin", color: { argb: "FF595959" } };
+    var border = { top: thin, left: thin, bottom: thin, right: thin };
+    var headFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F2F5" } };
+    var carFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE3F2EE" } };
+    var redFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDECEA" } };
+    var wb = new ExcelJS.Workbook();
+    var monthText = t.y + "年" + t.m + "月";
+
+    function sheet(name, cols) {
+      var ws = wb.addWorksheet(name, {
+        pageSetup: {
+          paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true,
+          margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 }
+        }
+      });
+      cols.forEach(function (w, k) { ws.getColumn(k + 1).width = w; });
+      return ws;
+    }
+    function cellsRow(ws, r, vals, opt) {
+      opt = opt || {};
+      var row = ws.getRow(r);
+      row.height = opt.height || 20;
+      vals.forEach(function (v, k) {
+        var c = row.getCell(k + 1);
+        c.value = v;
+        if (opt.border !== false) c.border = border;
+        c.font = { name: font, size: opt.size || 10, bold: !!opt.bold, color: { argb: (opt.colors && opt.colors[k]) || opt.color || "FF1F2933" } };
+        c.alignment = { horizontal: (opt.left && opt.left.indexOf(k) >= 0) ? "left" : "center", vertical: "middle", wrapText: !!opt.wrap };
+        if (opt.fill) c.fill = opt.fill;
+      });
+    }
+
+    // 送迎表(1日1ページ): 迎え=A〜F列、送り=H〜M列
+    var ws = sheet("送迎表", [4, 6, 13, 7, 7, 6, 2, 4, 6, 13, 7, 7, 6]);
+    var r = 1;
+    res.days.forEach(function (p, di) {
+      if (di > 0) { ws.getRow(r - 1).addPageBreak(); }
+      ws.mergeCells(r, 1, r, 13);
+      cellsRow(ws, r, [longLabel(p.date) + "　送迎表"], { border: false, size: 14, bold: true, left: [0], height: 26, color: p.w === "土" ? "FF2B6CB0" : "FF1F2933" });
+      r++;
+      ws.mergeCells(r, 1, r, 13);
+      cellsRow(ws, r, ["送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" + (p.selfCome.length ? " / 送迎なし: " + p.selfCome.map(function (u) { return u.name; }).join("、") : "") +
+        (p.absent.length ? " / 休み: " + p.absent.map(function (u) { return u.name; }).join("、") : "")], { border: false, size: 9, left: [0], color: "FF616E7C", wrap: true, height: 28 });
+      r++;
+      p.checks.forEach(function (c) {
+        ws.mergeCells(r, 1, r, 13);
+        cellsRow(ws, r, ["⚠ " + c.msg], { border: false, bold: true, left: [0], color: "FFC0392B", fill: redFill, wrap: true, height: 22 });
+        r++;
+      });
+      p.cars.forEach(function (c) {
+        r++;
+        ws.mergeCells(r, 1, r, 13);
+        cellsRow(ws, r, [c.car.name + "　運転: " + (c.driver || "未定") + "　" + c.riders.length + "/" + c.car.seats + "人"], {
+          bold: true, left: [0], size: 11, fill: c.driver ? carFill : redFill, color: c.driver ? "FF1F2933" : "FFC0392B", height: 22
+        });
+        r++;
+        var head = ["順", "時刻", "迎え(到着 " + c.arrive + ")", "地区", "", "確認"];
+        var headD = ["順", "時刻", "送り", "地区", "", "確認"];
+        cellsRow(ws, r, head.concat([null], headD), { bold: true, fill: headFill });
+        ws.getCell(r, 7).border = {}; ws.getCell(r, 7).fill = { type: "pattern", pattern: "none" };
+        r++;
+        for (var i = 0; i < c.riders.length; i++) {
+          var a = c.pick[i], b = c.drop[i];
+          cellsRow(ws, r, [i + 1, a.time, a.u.name, a.u.area, a.u.wheelchair ? "車いす" : "", "", null, i + 1, b.time, b.u.name, b.u.area, b.u.wheelchair ? "車いす" : "", ""], {
+            left: [2, 9], height: 22, colors: [null, null, null, null, "FF2B6CB0", null, null, null, null, null, null, "FF2B6CB0"]
+          });
+          ws.getCell(r, 7).border = {};
+          r++;
+        }
+      });
+      if (p.left.length) {
+        r++;
+        ws.mergeCells(r, 1, r, 13);
+        cellsRow(ws, r, ["車に乗れていない人: " + p.left.map(function (x) { return x.u.name + (x.u.wheelchair ? "(車いす)" : ""); }).join("、")], {
+          bold: true, left: [0], color: "FFC0392B", fill: redFill, height: 22
+        });
+        r++;
+      }
+      r += 2;
+    });
+    ws.pageSetup.printArea = "A1:M" + r;
+
+    // 見直すところ
+    var ws2 = sheet("見直すところ", [12, 12, 70]);
+    ws2.getCell(1, 1).value = "送迎表で見直すところ　" + monthText + "(" + res.checks.length + "件)";
+    ws2.getCell(1, 1).font = { name: font, size: 14, bold: true };
+    cellsRow(ws2, 3, ["日付", "種類", "内容"], { bold: true, fill: headFill });
+    if (!res.checks.length) ws2.getCell(4, 1).value = "見直すところはありません。";
+    res.checks.forEach(function (c, i) {
+      cellsRow(ws2, 4 + i, [label(c.date), c.kind, c.msg], { left: [2], wrap: true, height: 30 });
+      ws2.getCell(4 + i, 2).font = { name: font, size: 10, bold: true, color: { argb: "FFC0392B" } };
+      ws2.getCell(4 + i, 2).fill = redFill;
+    });
+    ws2.pageSetup.printTitlesRow = "3:3";
+    return wb;
+  }
+
+  // ---------- イベント ----------
+  function changed() {
+    save();
+    lastResult = null;
+    document.getElementById("result").style.display = "none";
+  }
+
+  document.getElementById("month").addEventListener("change", function (e) { if (e.target.value) { state.month = e.target.value; changed(); } });
+  ["pickStart", "dropStart"].forEach(function (id) {
+    document.getElementById(id).addEventListener("change", function (e) { if (e.target.value) { state[id] = e.target.value; changed(); } });
+  });
+  document.getElementById("interval").addEventListener("change", function (e) { state.interval = Math.max(1, parseInt(e.target.value, 10) || 10); changed(); });
+  document.getElementById("areaOrder").addEventListener("change", function (e) { state.areaOrder = e.target.value; changed(); });
+
+  var NUMERIC = { order: 1, seats: 1, wc: 0 };
+  document.querySelector("main").addEventListener("change", function (e) {
+    var t = e.target, kind = t.dataset.t, i = +t.dataset.i, k = t.dataset.k;
+    if (!kind || k === undefined || isNaN(i)) return;
+    var obj = state[kind][i];
+    if (k === "day") {
+      var w = t.dataset.w, at = obj.days.indexOf(w);
+      if (t.checked && at < 0) obj.days.push(w);
+      if (!t.checked && at >= 0) obj.days.splice(at, 1);
+    } else if (t.type === "checkbox") obj[k] = t.checked;
+    else if (k in NUMERIC) obj[k] = Math.max(NUMERIC[k], parseInt(t.value, 10) || NUMERIC[k]);
+    else obj[k] = t.value;
+    if (kind === "users" && k === "name") renderChanges();
+    changed();
+  });
+  document.querySelector("main").addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.dataset.del === undefined || !t.dataset.t) return;
+    state[t.dataset.t].splice(+t.dataset.del, 1);
+    renderInputs(); changed();
+  });
+  document.getElementById("add-user").addEventListener("click", function () {
+    state.users.push({ name: "新しい利用者", days: ["月"], transport: true, area: areaList()[0] || "", order: 1, wheelchair: false });
+    renderUsers(); renderChanges(); changed();
+  });
+  document.getElementById("add-car").addEventListener("click", function () {
+    state.cars.push({ name: (state.cars.length + 1) + "号車", seats: 4, wc: 0 });
+    renderCars(); changed();
+  });
+  document.getElementById("add-driver").addEventListener("click", function () {
+    state.drivers.push({ name: "新しいドライバー", days: ["月", "火", "水", "木", "金"] });
+    renderDrivers(); changed();
+  });
+  document.getElementById("add-change").addEventListener("click", function () {
+    state.changes.push({ date: dateOf(1), name: state.users[0] ? state.users[0].name : "", kind: "休み" });
+    renderChanges(); changed();
+  });
+
+  document.getElementById("run").addEventListener("click", run);
+  document.getElementById("day-select").addEventListener("change", function (e) { showDay(e.target.value); });
+  document.getElementById("prev-day").addEventListener("click", function () { moveDay(-1); });
+  document.getElementById("next-day").addEventListener("click", function () { moveDay(1); });
+  document.getElementById("checks").addEventListener("click", function (e) {
+    var tr = e.target.closest("tr[data-date]");
+    if (tr && lastResult.days.some(function (p) { return p.date === tr.dataset.date; })) {
+      showDay(tr.dataset.date);
+      document.getElementById("day-select").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+  document.getElementById("print-day").addEventListener("click", function () { window.print(); });
+  document.getElementById("print-month").addEventListener("click", printMonth);
+  document.getElementById("xlsx").addEventListener("click", downloadXlsx);
+  document.getElementById("reset-sample").addEventListener("click", function () {
+    state = sampleData(); renderInputs(); changed();
+  });
+
+  renderInputs();
+
+  // ?demo を付けて開くと、サンプルで作った送迎表だけを見せる(出品ページのリンク・画面写真用)。?demo=2026-10-17 で日付も選べる
+  var demo = location.search.match(/[?&]demo(?:=([\d-]+))?/);
+  if (demo) {
+    state = sampleData();
+    renderInputs();
+    document.querySelectorAll("main > section.card:not(#result), main > .grid2, main > .notice").forEach(function (el) { el.style.display = "none"; });
+    run();
+    if (demo[1]) showDay(demo[1]);
+    window.scrollTo(0, 0);
+  }
+})();
+</script>
+</body>
+</html>
