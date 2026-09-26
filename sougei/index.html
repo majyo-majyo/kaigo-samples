@@ -270,7 +270,7 @@
   var SAMPLE_CARS = [["1号車 ハイエース(リフト付き)", 6, 2], ["2号車 軽(リフト付き)", 3, 1], ["3号車 ワゴン", 7, 0]];
   var SAMPLE_DRIVERS = [["山本", "月火水木金"], ["中川", "月水金"], ["西田", "火木土"], ["野村", "月火木金"]];
   // 見直すところが出るように、わざと入れてある連絡:
-  //   10/17(土) 振替が多く車が2台要るが、土曜に運転できるのは1人 → ドライバー不足
+  //   10/17(土) 振替が多く車が2台要るが、土曜に運転できるのは1人 → ピストン(2便)で回す例
   //   10/22(木) 石井さんの休み連絡(木曜は利用日ではない) → 予定にない休み
   //   10/26(月) 竹内さん(車いす)の振替で、車いすが4人・リフトの席は3つ → 乗れない
   var SAMPLE_CHANGES = [
@@ -464,16 +464,48 @@
     var drivers = state.drivers.filter(function (d) { return d.days.indexOf(w) >= 0; });
     var usedCars = cars.filter(function (c) { return c.riders.length; });
     var pick0 = toMin(state.pickStart), drop0 = toMin(state.dropStart), step = Math.max(1, +state.interval || 10);
+    // 1便: 車の順に運転手を割り当てる
+    var firsts = [];
     usedCars.forEach(function (c, k) {
-      c.driver = drivers[k] ? drivers[k].name : "";
-      if (!c.driver) checks.push({ kind: "ドライバー", msg: c.car.name + "を運転できる人がいません(" + w + "曜日に運転できるのは " + drivers.length + "人・車は " + usedCars.length + "台要ります)" });
-      c.riders.sort(function (a, b) { return areaRank(a.area) - areaRank(b.area) || (a.order - b.order); });
-      c.pick = c.riders.map(function (u, i) { return { u: u, time: toTime(pick0 + i * step) }; });
-      c.arrive = toTime(pick0 + c.riders.length * step);
-      c.drop = c.riders.slice().reverse().map(function (u, i) { return { u: u, time: toTime(drop0 + (i + 1) * step) }; });
+      c.trip = 1; c.driver = "";
+      if (drivers[k]) { c.driver = drivers[k].name; firsts.push(c); }
     });
+    // 運転手が足りない分は、1便を終えた運転手がピストン(2便)で回る。乗り切れるなら同じ車でもう一回
+    var piston = 0;
+    usedCars.filter(function (c) { return !c.driver; }).forEach(function (c) {
+      var need = c.riders.length, needWc = c.riders.filter(function (u) { return u.wheelchair; }).length;
+      function fits(f) { return f.car.seats >= need && f.car.wc >= needWc; }
+      var free = firsts.filter(function (f) { return !f.next; });
+      var f = free.filter(fits)[0] || free[0];
+      if (!f) {
+        checks.push({ kind: "ドライバー", msg: c.car.name + "を運転できる人がいません(" + w + "曜日に運転できるのは " + drivers.length + "人。ピストンにしても足りません)" });
+        return;
+      }
+      f.next = c; c.prev = f; c.trip = 2; c.driver = f.driver;
+      if (fits(f)) c.car = f.car;
+      piston++;
+    });
+    usedCars.forEach(function (c) {
+      c.riders.sort(function (a, b) { return areaRank(a.area) - areaRank(b.area) || (a.order - b.order); });
+    });
+    // 時刻: 1便は設定の時刻から。2便は1便が施設に着いて(送りは最後の人を降ろして)から1区間あとに出る
+    function setTimes(c, p0, d0) {
+      c.pick = c.riders.map(function (u, i) { return { u: u, time: toTime(p0 + i * step) }; });
+      c.arrive = toTime(p0 + c.riders.length * step);
+      c.dropFrom = toTime(d0);
+      c.drop = c.riders.slice().reverse().map(function (u, i) { return { u: u, time: toTime(d0 + (i + 1) * step) }; });
+    }
+    usedCars.filter(function (c) { return c.trip === 1; }).forEach(function (c) { setTimes(c, pick0, drop0); });
+    usedCars.filter(function (c) { return c.trip === 2; }).forEach(function (c) {
+      setTimes(c, toMin(c.prev.arrive) + step, toMin(c.prev.drop[c.prev.drop.length - 1].time) + step);
+    });
+    usedCars.forEach(function (c) {
+      c.color = state.cars.indexOf(c.car) % 4;
+      c.label = c.car.name + (c.trip === 2 ? "【2便】" : "");
+    });
+    usedCars.sort(function (a, b) { return a.trip - b.trip; });
 
-    return { date: ds, w: w, cars: usedCars, left: left, selfCome: selfCome, absent: absent, riders: riders.length, checks: checks };
+    return { date: ds, w: w, cars: usedCars, piston: piston, left: left, selfCome: selfCome, absent: absent, riders: riders.length, checks: checks };
   }
 
   function analyze() {
@@ -528,18 +560,23 @@
     return "<td class='drv" + (c.driver ? "" : " none") + "'>" + (c.driver ? esc(c.driver) : "未定") + "</td>";
   }
 
+  function carSummary(p) {
+    var cars = p.cars.map(function (c) { return c.car; }).filter(function (c, i, a) { return a.indexOf(c) === i; });
+    return "車 " + cars.length + "台" + (p.piston ? "(運転手が足りないため、ピストンの2便目あり)" : "");
+  }
+
   function dayHtml(p) {
     var h = "<div class='day-page'>";
     h += "<div class='day-title'><span class='" + wdClass(p.w) + "'>" + esc(longLabel(p.date)) + "</span>　送迎表</div>";
-    h += "<p class='day-sub'>送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" +
+    h += "<p class='day-sub'>送迎 " + p.riders + "人 / " + carSummary(p) +
       (p.selfCome.length ? " / 送迎なし " + p.selfCome.length + "人" : "") + (p.absent.length ? " / 休み " + p.absent.length + "人" : "") + "</p>";
     if (p.checks.length) h += "<ul class='day-checks'>" + p.checks.map(function (c) { return "<li>⚠ " + esc(c.msg) + "</li>"; }).join("") + "</ul>";
     // 車と運転手の一覧
     h += "<div class='scroll'><table class='plan'><caption>車と運転手</caption><thead><tr><th class='l'>車</th><th>運転手</th><th>人数</th><th>迎え</th><th>送り</th></tr></thead><tbody>" +
-      p.cars.map(function (c, k) {
-        return "<tr><td class='l'><span class='carno c" + (k % 4) + "'></span>" + esc(c.car.name) + "</td>" + drvCell(c) +
+      p.cars.map(function (c) {
+        return "<tr><td class='l'><span class='carno c" + c.color + "'></span>" + esc(c.label) + "</td>" + drvCell(c) +
           "<td>" + c.riders.length + "/" + c.car.seats + "人</td>" +
-          "<td>" + c.pick[0].time + "〜" + c.arrive + "着</td><td>" + state.dropStart.replace(/^0/, "") + "発〜" + c.drop[c.drop.length - 1].time + "</td></tr>";
+          "<td>" + c.pick[0].time + "〜" + c.arrive + "着</td><td>" + c.dropFrom + "発〜" + c.drop[c.drop.length - 1].time + "</td></tr>";
       }).join("") + "</tbody></table></div>";
     // 迎え・送りを、時刻・車・運転手がまとめて分かる1つの表に
     function timeTable(title, key) {
@@ -548,7 +585,7 @@
       rows.sort(function (a, b) { return toMin(a.x.time) - toMin(b.x.time) || a.k - b.k; });
       return "<div class='scroll'><table class='plan'><caption>" + title + "</caption><thead><tr><th>時刻</th><th class='l'>車</th><th>運転手</th><th class='l'>名前</th><th>地区</th><th></th><th>確認</th></tr></thead><tbody>" +
         rows.map(function (r) {
-          return "<tr><td><b>" + r.x.time + "</b></td><td class='l'><span class='carno c" + (r.k % 4) + "'></span>" + esc(r.c.car.name) + "</td>" + drvCell(r.c) +
+          return "<tr><td><b>" + r.x.time + "</b></td><td class='l'><span class='carno c" + r.c.color + "'></span>" + esc(r.c.label) + "</td>" + drvCell(r.c) +
             "<td class='l'>" + esc(r.x.u.name) + "</td><td>" + esc(r.x.u.area) + "</td><td>" +
             (r.x.u.wheelchair ? "<span class='wc'>車いす</span>" : "") + "</td><td class='chk'></td></tr>";
         }).join("") + "</tbody></table></div>";
@@ -656,7 +693,7 @@
       cellsRow(ws, r, [longLabel(p.date) + "　送迎表"], { border: false, size: 14, bold: true, left: [0], height: 26, color: p.w === "土" ? "FF2B6CB0" : "FF1F2933" });
       r++;
       ws.mergeCells(r, 1, r, 7);
-      cellsRow(ws, r, ["送迎 " + p.riders + "人 / 車 " + p.cars.length + "台" + (p.selfCome.length ? " / 送迎なし: " + p.selfCome.map(function (u) { return u.name; }).join("、") : "") +
+      cellsRow(ws, r, ["送迎 " + p.riders + "人 / " + carSummary(p) + (p.selfCome.length ? " / 送迎なし: " + p.selfCome.map(function (u) { return u.name; }).join("、") : "") +
         (p.absent.length ? " / 休み: " + p.absent.map(function (u) { return u.name; }).join("、") : "")], { border: false, size: 9, left: [0], color: "FF616E7C", wrap: true, height: 28 });
       r++;
       p.checks.forEach(function (c) {
@@ -673,8 +710,8 @@
       ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 5, r, 6);
       r++;
       p.cars.forEach(function (c) {
-        cellsRow(ws, r, [c.car.name, null, c.driver || "未定", c.riders.length + "/" + c.car.seats + "人", c.pick[0].time + "〜" + c.arrive + "着", null,
-          state.dropStart.replace(/^0/, "") + "発〜" + c.drop[c.drop.length - 1].time], {
+        cellsRow(ws, r, [c.label, null, c.driver || "未定", c.riders.length + "/" + c.car.seats + "人", c.pick[0].time + "〜" + c.arrive + "着", null,
+          c.dropFrom + "発〜" + c.drop[c.drop.length - 1].time], {
           left: [0], height: 22, fill: c.driver ? null : redFill, colors: [null, null, c.driver ? null : "FFC0392B"]
         });
         ws.getCell(r, 3).font = { name: font, size: 10, bold: true, color: { argb: c.driver ? "FF1F2933" : "FFC0392B" } };
@@ -693,7 +730,7 @@
         cellsRow(ws, r, ["時刻", "車", "運転手", "名前", "地区", "", "確認"], { bold: true, fill: headFill });
         r++;
         rows.forEach(function (x) {
-          cellsRow(ws, r, [x.x.time, x.c.car.name, x.c.driver || "未定", x.x.u.name, x.x.u.area, x.x.u.wheelchair ? "車いす" : "", ""], {
+          cellsRow(ws, r, [x.x.time, x.c.label, x.c.driver || "未定", x.x.u.name, x.x.u.area, x.x.u.wheelchair ? "車いす" : "", ""], {
             left: [1, 3], height: 22, colors: [null, null, x.c.driver ? null : "FFC0392B", null, null, "FF2B6CB0"]
           });
           ws.getCell(r, 1).font = { name: font, size: 10, bold: true };
