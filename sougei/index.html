@@ -685,7 +685,7 @@
     }
 
     // 送迎表(1日1ページ): 車と運転手 → 迎え → 送り を時刻順で
-    var ws = sheet("送迎表", [8, 26, 10, 13, 12, 8, 6]);
+    var ws = sheet("送迎表", [8, 30, 10, 13, 14, 8, 8]);
     var r = 1;
     res.days.forEach(function (p, di) {
       if (di > 0) { ws.getRow(r - 1).addPageBreak(); }
@@ -706,16 +706,16 @@
       ws.mergeCells(r, 1, r, 7);
       cellsRow(ws, r, ["車と運転手"], { border: false, bold: true, size: 11, left: [0], height: 22 });
       r++;
-      cellsRow(ws, r, ["車", null, "運転手", "人数", "迎え", null, "送り"], { bold: true, fill: headFill });
-      ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 5, r, 6);
+      cellsRow(ws, r, ["車", null, "運転手", "人数", "迎え", "送り", null], { bold: true, fill: headFill });
+      ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 6, r, 7);
       r++;
       p.cars.forEach(function (c) {
-        cellsRow(ws, r, [c.label, null, c.driver || "未定", c.riders.length + "/" + c.car.seats + "人", c.pick[0].time + "〜" + c.arrive + "着", null,
-          c.dropFrom + "発〜" + c.drop[c.drop.length - 1].time], {
+        cellsRow(ws, r, [c.label, null, c.driver || "未定", c.riders.length + "/" + c.car.seats + "人", c.pick[0].time + "〜" + c.arrive + "着",
+          c.dropFrom + "発〜" + c.drop[c.drop.length - 1].time, null], {
           left: [0], height: 22, fill: c.driver ? null : redFill, colors: [null, null, c.driver ? null : "FFC0392B"]
         });
         ws.getCell(r, 3).font = { name: font, size: 10, bold: true, color: { argb: c.driver ? "FF1F2933" : "FFC0392B" } };
-        ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 5, r, 6);
+        ws.mergeCells(r, 1, r, 2); ws.mergeCells(r, 6, r, 7);
         r++;
       });
       // 迎え・送り(時刻順。時刻・車・運転手がまとめて分かる)
