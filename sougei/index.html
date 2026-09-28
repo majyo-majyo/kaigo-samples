@@ -850,5 +850,39 @@
   }
 })();
 </script>
+<!-- お試し版: 公開ページでは「Excelで保存」と印刷を止める。販売用のファイルでは TRIAL を false にする -->
+<style>
+  .trial-lock::before { content: "🔒 "; }
+  .trial-note { display: none; margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: #fff4d6; color: #7a5200; font-size: 14px; line-height: 1.6; }
+  .trial-note.on { display: block; }
+  .trial-note a { color: #2f7d6d; font-weight: 700; }
+  @media print {
+    body.trial > * { display: none !important; }
+    body.trial::after { content: "印刷は、テンプレート(有料)をご購入いただくと使えます。"; display: block; padding: 40px; font-size: 18px; }
+  }
+</style>
+<script>
+(function () {
+  var TRIAL = true;
+  var BUY_URL = "";   // noteの販売ページのURL(公開したら入れる)
+  if (!TRIAL) return;
+  document.body.classList.add("trial");
+  var sel = "#xlsx, #print, #print-day, #print-month";
+  var note = document.createElement("div");
+  note.className = "trial-note";
+  note.innerHTML = "このページはお試し版です。<b>Excelで保存・印刷</b>は、テンプレート(Excel版・Googleスプレッドシート版・Web版・説明書つき)をご購入いただくと使えます。" +
+    (BUY_URL ? ' <a href="' + BUY_URL + '" target="_blank" rel="noopener">テンプレートを見る</a>' : "");
+  var first = document.querySelector(sel);
+  if (first && first.parentNode) first.parentNode.parentNode.insertBefore(note, first.parentNode.nextSibling);
+  Array.prototype.forEach.call(document.querySelectorAll(sel), function (b) { b.classList.add("trial-lock"); b.title = "購入後に使えます"; });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest || !e.target.closest(sel)) return;
+    e.stopPropagation(); e.preventDefault();
+    note.classList.add("on");
+    note.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, true);
+  window.print = function () { note.classList.add("on"); };
+})();
+</script>
 </body>
 </html>
